@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# R and RStudio temporary files
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+.Rcheck/
+
+# R Markdown temporary outputs
+*_cache/
+*_files/
+*.utf8.md
+*.knit.md
+
+# renv local package environment
+renv/library/
+renv/staging/
+renv/local/
+.Renviron
+
+# Personal and temporary documents
+*.tmp
+*.bak
+~$*
+submission/*coversheet*
+submission/*certificate*
+
+# Local credentials
+.env
+.env.*
