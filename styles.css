@@ -1,0 +1,193 @@
+
+/* ==========================================================
+   Cambridge MSt Healthcare Data Science
+   Module 1 — NHANES 2021–2023
+
+   Custom theme for rmdformats::readthedown
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   1. Colour palette
+   ---------------------------------------------------------- */
+
+:root {
+  --navy: #17365D;
+  --blue: #2474A6;
+  --light-blue: #EAF3FA;
+  --border-blue: #DCE6EF;
+  --white: #FFFFFF;
+  --text: #263445;
+}
+
+
+/* ----------------------------------------------------------
+   2. Main report typography
+   ---------------------------------------------------------- */
+
+#main {
+  color: var(--text);
+}
+
+#main h1,
+#main h2,
+#main h3,
+#main h4 {
+  color: var(--navy);
+}
+
+#main a {
+  color: var(--blue);
+}
+
+#main a:hover {
+  color: var(--navy);
+}
+
+
+/* ----------------------------------------------------------
+   3. Sidebar background
+   ---------------------------------------------------------- */
+
+#sidebar {
+  background-color: var(--navy) !important;
+}
+
+
+/* ----------------------------------------------------------
+   4. Sidebar title banner
+   ---------------------------------------------------------- */
+
+#sidebar h2 {
+  background-color: var(--blue) !important;
+  color: var(--white) !important;
+}
+
+#sidebar h2 a {
+  color: var(--white) !important;
+}
+
+
+/* ----------------------------------------------------------
+   5. Sidebar navigation
+   ---------------------------------------------------------- */
+
+#sidebar #toc a {
+  color: var(--white) !important;
+}
+
+#sidebar #toc a:hover {
+  color: #BBDDF2 !important;
+}
+
+
+/* ----------------------------------------------------------
+   6. Tables
+   ---------------------------------------------------------- */
+
+#main table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#main table thead {
+  background-color: var(--navy);
+  color: var(--white);
+}
+
+#main table th {
+  background-color: var(--navy);
+  color: var(--white);
+  font-weight: 600;
+}
+
+#main table th,
+#main table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-blue);
+}
+
+#main table tbody tr:nth-child(even) {
+  background-color: var(--light-blue);
+}
+
+
+/* ----------------------------------------------------------
+   7. R code blocks
+   ---------------------------------------------------------- */
+
+#main pre {
+  border-left: 3px solid var(--blue);
+  border-radius: 4px;
+}
+
+
+/* ----------------------------------------------------------
+   8. Blockquotes
+   ---------------------------------------------------------- */
+
+#main blockquote {
+  border-left: 4px solid var(--blue);
+  background-color: var(--light-blue);
+  padding: 12px 16px;
+  color: var(--text);
+}
+
+
+/* ----------------------------------------------------------
+   9. Horizontal rules
+   ---------------------------------------------------------- */
+
+#main hr {
+  border: 0;
+  border-top: 1px solid var(--border-blue);
+}
+
+
+/* ----------------------------------------------------------
+   10. Print formatting
+   ---------------------------------------------------------- */
+
+@media print {
+
+  #main {
+    color: #000000;
+  }
+
+  #main h1,
+  #main h2,
+  #main h3 {
+    color: var(--navy);
+  }
+
+  #main table {
+    page-break-inside: avoid;
+  }
+}
+
+
+/* Main report title and subtitle */
+#content > h1.title,
+#content > h1.subtitle,
+#content > h1 {
+  color: #17365D !important;
+}
+
+/* Main content section headings */
+#main h1,
+#main h2,
+#main h3,
+#main h4 {
+  color: #17365D !important;
+}
+
+
+/* Ensure audit table headers are readable */
+#main table thead th,
+#main table thead td,
+#content table thead th,
+#content table thead td {
+  background-color: #17365D !important;
+  color: #FFFFFF !important;
+  border-color: #17365D !important;
+}

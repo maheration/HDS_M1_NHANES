@@ -1,29 +1,418 @@
 ---
-title: "analysis"
-output: html_document
-date: "2026-10-25"
+title: "Albuminuria among US adults with metabolic risk factors and preserved kidney filtration"
+subtitle: "NHANES August 2021–August 2023 | Reproducible data preparation and validation"
+author: "Maher"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  rmdformats::readthedown:
+    highlight: tango
+    number_sections: true
+    toc_depth: 3
+    css: styles.css
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 5
+)
 ```
 
-## R Markdown
+```{r packages, include=FALSE}
+library(haven)
+library(dplyr)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
 ```
 
-## Including Plots
+## Data sources
 
-You can also embed plots, for example:
+This analysis uses public-use data from the **National Health and Nutrition Examination Survey (NHANES)**, August 2021–August 2023 cycle. NHANES is a cross-sectional survey of the civilian non-institutionalised U.S. population that combines a household interview with a standardised physical examination and laboratory tests performed in a mobile examination centre (MEC).
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+Data are released as separate component files linked by the unique participant identifier `SEQN`. The files required for the present study are:
+
+- **DEMO_L** — demographic variables (age, sex, race/ethnicity), interview and examination status, and the survey design variables (masked variance stratum `SDMVSTRA` and primary sampling unit `SDMVPSU`).
+- **ALB_CR_L** — urine albumin and creatinine concentrations and the albumin-to-creatinine ratio (`URDACT`, mg/g). This ratio supplies the binary primary outcome (elevated albuminuria: ACR ≥ 30 mg/g).
+- **BIOPRO_L** — standard biochemistry profile, including serum creatinine (`LBXSCR`). Serum creatinine is required to calculate estimated glomerular filtration rate (eGFR) with the CKD-EPI 2021 equation. This file also contains the phlebotomy sample weight.
+- **GHB_L** — glycated haemoglobin (`LBXGH`, %). Used as one component of the diabetes definition.
+- **BMX_L** — body measures, including body mass index (`BMXBMI`, kg/m²).
+- **BPXO_L** — oscillometric blood-pressure readings obtained in the MEC.
+- **DIQ_L** — diabetes questionnaire (self-reported diagnosis, insulin use, and oral agents).
+- **BPQ_L** — blood-pressure questionnaire (self-reported hypertension and antihypertensive medication).
+- **SMQ_L** — cigarette-smoking questionnaire.
+
+Because eGFR and the diabetes definition rely on blood laboratory measures, the appropriate survey weight is the phlebotomy 2-year weight (`WTPH2YR`). This weight adjusts for the fact that not every examined participant provided a blood sample. It is used together with the design variables `SDMVSTRA` and `SDMVPSU` from the demographics file. Interview and MEC examination weights are retained for descriptive checks but are not the primary analytic weights. No weighted estimates are calculated at this stage.
+
+All files were obtained from the CDC NHANES public-use repository for the August 2021–August 2023 cycle.
+
+
+```{r download-raw-datasets, include=FALSE}
+dir.create("data/raw", recursive = TRUE, showWarnings = FALSE)
+
+files <- c(
+  "DEMO_L.XPT",
+  "ALB_CR_L.XPT",
+  "BIOPRO_L.XPT",
+  "GHB_L.XPT",
+  "BMX_L.XPT",
+  "BPXO_L.XPT",
+  "DIQ_L.XPT",
+  "BPQ_L.XPT",
+  "SMQ_L.XPT"
+)
+
+base_url <- "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/"
+
+for (f in files) {
+  dest <- file.path("data/raw", f)
+  if (!file.exists(dest)) {
+    download.file(
+      url = paste0(base_url, f),
+      destfile = dest,
+      mode = "wb"
+    )
+    message("Downloaded: ", f)
+  } else {
+    message("Already present: ", f)
+  }
+}
+
+list.files("data/raw")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r load-raw-datasets, include=FALSE}
+demo  <- read_xpt("data/raw/DEMO_L.XPT")
+alb   <- read_xpt("data/raw/ALB_CR_L.XPT")
+bio   <- read_xpt("data/raw/BIOPRO_L.XPT")
+ghb   <- read_xpt("data/raw/GHB_L.XPT")
+bmx   <- read_xpt("data/raw/BMX_L.XPT")
+bpxo  <- read_xpt("data/raw/BPXO_L.XPT")
+diq   <- read_xpt("data/raw/DIQ_L.XPT")
+bpq   <- read_xpt("data/raw/BPQ_L.XPT")
+smq   <- read_xpt("data/raw/SMQ_L.XPT")
+
+tibble(
+  file   = c("DEMO_L", "ALB_CR_L", "BIOPRO_L", "GHB_L", "BMX_L",
+             "BPXO_L", "DIQ_L", "BPQ_L", "SMQ_L"),
+  n_rows = c(nrow(demo), nrow(alb), nrow(bio), nrow(ghb), nrow(bmx),
+             nrow(bpxo), nrow(diq), nrow(bpq), nrow(smq)),
+  n_cols = c(ncol(demo), ncol(alb), ncol(bio), ncol(ghb), ncol(bmx),
+             ncol(bpxo), ncol(diq), ncol(bpq), ncol(smq))
+)
+```
+
+## Source files and structure
+
+The component files were read with `haven::read_xpt()`. Each selected file contains one row per participant and is linked by the common identifier `SEQN`. The table below records the number of rows and columns in each source file as released by CDC.
+
+```{r source-files-structure}
+file_summary <- tibble(
+  file   = c("DEMO_L", "ALB_CR_L", "BIOPRO_L", "GHB_L", "BMX_L",
+             "BPXO_L", "DIQ_L", "BPQ_L", "SMQ_L"),
+  n_rows = c(nrow(demo), nrow(alb), nrow(bio), nrow(ghb), nrow(bmx),
+             nrow(bpxo), nrow(diq), nrow(bpq), nrow(smq)),
+  n_cols = c(ncol(demo), ncol(alb), ncol(bio), ncol(ghb), ncol(bmx),
+             ncol(bpxo), ncol(diq), ncol(bpq), ncol(smq))
+)
+
+knitr::kable(
+  file_summary,
+  col.names = c("File", "Rows", "Columns"),
+  caption = "Dimensions of the NHANES August 2021–August 2023 source files used in this analysis"
+)
+```
+
+## Primary outcome source: urine albumin-to-creatinine ratio
+
+Elevated albuminuria is defined from the urine albumin-to-creatinine ratio. In the `ALB_CR_L` file this ratio is stored in the variable `URDACT` (mg/g). The table below summarises the observed values and the extent of missingness in the source file.
+
+```{r inspect-acr}
+acr_summary <- tibble(
+  `Records in component` = nrow(alb),
+  `ACR available` = sum(!is.na(alb$URDACT)),
+  `ACR missing` = sum(is.na(alb$URDACT)),
+  `Available (%)` = round(100 * mean(!is.na(alb$URDACT)), 1),
+  `Median ACR (mg/g)` = round(median(alb$URDACT, na.rm=TRUE), 2),
+  `ACR >=30 mg/g (n)` = sum(alb$URDACT >= 30, na.rm=TRUE)
+)
+knitr::kable(acr_summary, caption="Urinary ACR availability and distribution within ALB_CR_L")
+```
+
+This is a source-component summary, not an estimate of albuminuria prevalence in the eligible study population. Missing measurements and the overlap with other required components are assessed separately below.
+
+## Key laboratory measures: serum creatinine and HbA1c
+
+Serum creatinine (`LBXSCR` in `BIOPRO_L`) is required to calculate eGFR with the CKD-EPI 2021 equation. Glycated haemoglobin (`LBXGH` in `GHB_L`) contributes to the diabetes definition. Both files contain the phlebotomy weight `WTPH2YR`. The summaries below show the observed ranges and missingness in the source files.
+
+```{r inspect-creatinine-hba1c}
+lab_summary <- tibble(
+  Measurement=c("Serum creatinine (mg/dL)", "HbA1c (%)"),
+  `Source records`=c(nrow(bio),nrow(ghb)),
+  `Available (n)`=c(sum(!is.na(bio$LBXSCR)),sum(!is.na(ghb$LBXGH))),
+  `Missing (n)`=c(sum(is.na(bio$LBXSCR)),sum(is.na(ghb$LBXGH))),
+  Median=c(median(bio$LBXSCR,na.rm=TRUE),median(ghb$LBXGH,na.rm=TRUE))
+)
+knitr::kable(lab_summary,digits=2,caption="Availability of blood laboratory measures within their respective source components")
+```
+
+A participant can have a laboratory-component record but no reported result. The source counts do not establish the reason for each missing result.
+
+## Body mass index
+
+Body mass index is obtained from the body-measures examination file (`BMX_L`). The variable `BMXBMI` is expressed in kg/m² and will be used both as a continuous covariate and to identify obesity (BMI ≥ 30) as one of the metabolic risk factors.
+
+```{r inspect-bmi}
+bmi_summary <- tibble(
+  `Source records`=nrow(bmx),
+  `BMI available`=sum(!is.na(bmx$BMXBMI)),
+  `BMI missing`=sum(is.na(bmx$BMXBMI)),
+  `Median BMI (kg/m²)`=round(median(bmx$BMXBMI,na.rm=TRUE),1)
+)
+knitr::kable(bmi_summary,caption="BMI availability within BMX_L")
+```
+
+These summaries are calculated on the full body-measures file and include participants younger than 20 years.
+
+## Blood-pressure examination
+
+Oscillometric blood-pressure readings are stored in `BPXO_L`. The file contains up to three systolic (`BPXOSY1`–`BPXOSY3`) and diastolic (`BPXODI1`–`BPXODI3`) measurements. These readings will be used, together with questionnaire data, to define hypertension.
+
+```{r inspect-bp}
+bp_summary <- tibble(
+  Reading=c("Systolic 1","Systolic 2","Systolic 3",
+            "Diastolic 1","Diastolic 2","Diastolic 3"),
+  `Available (n)`=vapply(bpxo[c("BPXOSY1","BPXOSY2","BPXOSY3",
+                               "BPXODI1","BPXODI2","BPXODI3")],
+                         function(x) sum(!is.na(x)),numeric(1))
+)
+knitr::kable(bp_summary,caption="Availability of repeated oscillometric blood-pressure readings")
+```
+
+The readings are assessed individually here. Rules for calculating mean blood pressure will be documented when variables are derived.
+
+## Diabetes questionnaire
+
+The diabetes questionnaire (`DIQ_L`) records whether a participant has ever been told by a doctor or other health professional that they have diabetes, and whether they are currently using insulin or oral diabetes medication.
+
+- `DIQ010` asks: “Has a doctor or other health professional ever told you that you have diabetes?” (1 = yes, 2 = no, 3 = borderline).
+- `DIQ050` asks whether the participant is now taking insulin.
+- `DIQ070` asks whether the participant is now taking diabetic pills to lower blood sugar.
+
+These self-reported items will later be used, together with the laboratory measure of glycated haemoglobin, to identify participants who have diabetes. The precise rule for combining the questionnaire answers with the laboratory result will be specified when the analysis variables are created. Here we only confirm that the source variables exist and examine their basic distributions.
+
+```{r inspect-dm}
+questionnaire_counts <- dplyr::bind_rows(lapply(c("DIQ010","DIQ050","DIQ070"), function(v) {
+  x <- diq[[v]]
+  tab <- table(ifelse(is.na(x), "NA (not recorded / not applicable)", as.character(x)))
+  tibble(Variable=v, `Response code`=names(tab), N=as.integer(tab))
+}))
+knitr::kable(questionnaire_counts, caption="Diabetes questionnaire response codes")
+```
+
+Questionnaire codes are reported without recoding. Missing entries on follow-up items may reflect the survey's routing rules; their interpretation will be checked against the relevant questionnaire documentation before phenotype construction.
+
+## Blood-pressure questionnaire
+
+The blood-pressure questionnaire (`BPQ_L`) records whether a participant has ever been told by a doctor or other health professional that they have hypertension (high blood pressure), and whether they are currently taking medication for it.
+
+- `BPQ020` asks: “Have you ever been told by a doctor or other health professional that you had hypertension, also called high blood pressure?”
+- `BPQ030` asks whether the participant was told this on two or more different visits.
+- `BPQ150` asks whether the participant is now taking prescribed medicine for high blood pressure.
+
+These self-reported answers will later be used, together with the blood-pressure readings taken during the physical examination, to identify participants who have hypertension. The exact rule for combining the questionnaire with the examination measurements will be set out when the study population is defined; here we only confirm that the source variables are present and examine their basic distributions.
+
+```{r bp-quiestionare}
+questionnaire_counts <- dplyr::bind_rows(lapply(c("BPQ020","BPQ030","BPQ150"), function(v) {
+  x <- bpq[[v]]
+  tab <- table(ifelse(is.na(x), "NA (not recorded / not applicable)", as.character(x)))
+  tibble(Variable=v, `Response code`=names(tab), N=as.integer(tab))
+}))
+knitr::kable(questionnaire_counts, caption="Blood-pressure questionnaire response codes")
+```
+
+Questionnaire codes are reported without recoding. Missing entries on follow-up items may reflect the survey's routing rules; their interpretation will be checked against the relevant questionnaire documentation before phenotype construction.
+
+## Smoking questionnaire
+
+Cigarette smoking status is taken from the smoking questionnaire (`SMQ_L`).
+
+- `SMQ020` asks whether the participant has smoked at least 100 cigarettes in their entire life.
+- `SMQ040` asks whether the participant now smokes cigarettes every day, some days, or not at all.
+
+These two items are the standard source for classifying participants as never, former or current smokers. The classification rule itself will be applied when the analysis variables are created; here we only confirm that the source items are present and examine their distributions.
+
+```{r smoking-questionare}
+questionnaire_counts <- dplyr::bind_rows(lapply(c("SMQ020","SMQ040"), function(v) {
+  x <- smq[[v]]
+  tab <- table(ifelse(is.na(x), "NA (not recorded / not applicable)", as.character(x)))
+  tibble(Variable=v, `Response code`=names(tab), N=as.integer(tab))
+}))
+knitr::kable(questionnaire_counts, caption="Smoking questionnaire response codes")
+```
+
+Questionnaire codes are reported without recoding. Missing entries on follow-up items may reflect the survey's routing rules; their interpretation will be checked against the relevant questionnaire documentation before phenotype construction.
+
+## Missingness of key source variables
+
+The table below shows the number and percentage of missing values for the main variables that will be used to define the outcome, the metabolic risk factors and the covariates. Percentages are calculated from the total number of records in each source file. These percentages use the number of records within each respective component as the denominator. They do not count participants absent from the component altogether. Follow-up questionnaire items may be intentionally skipped.
+
+```{r missingness-vars}
+missing_summary <- tibble(
+  Variable = c(
+    "Urine ACR (URDACT)",
+    "Serum creatinine (LBXSCR)",
+    "HbA1c (LBXGH)",
+    "BMI (BMXBMI)",
+    "Systolic BP (BPXOSY1)",
+    "Age (RIDAGEYR)",
+    "Sex (RIAGENDR)",
+    "Race/ethnicity (RIDRETH3)",
+    "Diabetes self-report (DIQ010)",
+    "Insulin use (DIQ050)",
+    "Oral diabetes medication (DIQ070)",
+    "Hypertension self-report (BPQ020)",
+    "Antihypertensive medication (BPQ150)",
+    "Smoking 100+ cigarettes (SMQ020)"
+  ),
+  Source_file = c(
+    "ALB_CR_L", "BIOPRO_L", "GHB_L", "BMX_L", "BPXO_L",
+    "DEMO_L", "DEMO_L", "DEMO_L",
+    "DIQ_L", "DIQ_L", "DIQ_L",
+    "BPQ_L", "BPQ_L", "SMQ_L"
+  ),
+  N_missing = c(
+    sum(is.na(alb$URDACT)),
+    sum(is.na(bio$LBXSCR)),
+    sum(is.na(ghb$LBXGH)),
+    sum(is.na(bmx$BMXBMI)),
+    sum(is.na(bpxo$BPXOSY1)),
+    sum(is.na(demo$RIDAGEYR)),
+    sum(is.na(demo$RIAGENDR)),
+    sum(is.na(demo$RIDRETH3)),
+    sum(is.na(diq$DIQ010)),
+    sum(is.na(diq$DIQ050)),
+    sum(is.na(diq$DIQ070)),
+    sum(is.na(bpq$BPQ020)),
+    sum(is.na(bpq$BPQ150)),
+    sum(is.na(smq$SMQ020))
+  ),
+  N_total = c(
+    nrow(alb), nrow(bio), nrow(ghb), nrow(bmx), nrow(bpxo),
+    nrow(demo), nrow(demo), nrow(demo),
+    nrow(diq), nrow(diq), nrow(diq),
+    nrow(bpq), nrow(bpq), nrow(smq)
+  )
+) %>%
+  mutate(Pct_missing = round(100 * N_missing / N_total, 1))
+
+knitr::kable(
+  missing_summary,
+  col.names = c("Variable", "Source file", "Missing (n)", "Total (n)", "Missing (%)"),
+  caption = "Missingness of key source variables required for the research question"
+)
+```
+Age, sex and race/ethnicity have no missing values in the demographics source. The laboratory files contain records with missing measurements: these must be distinguished from participants who have no record in the component. The observed source-level missingness does not, by itself, establish whether a missing laboratory result was due to eligibility, specimen collection, processing or another reason.
+
+Missing values on conditional questionnaire items (including diabetes and blood-pressure medication questions) can arise from planned skip patterns. They should not automatically be classified as nonresponse; equally, each missing entry should not be assumed to be a confirmed skip without consulting the questionnaire routing rules.
+
+## Range and consistency checks
+
+The distributions of key continuous variables were assessed using observed minimum, median and maximum values. These descriptive summaries were reviewed for potentially implausible or extreme measurements in clinical context. No formal out-of-range count was calculated, and no records were modified or excluded during this assessment.
+
+```{r range-check}
+range_checks <- tibble(
+  Variable = c("Urine ACR (mg/g)", "Serum creatinine (mg/dL)", "HbA1c (%)",
+               "BMI (kg/m²)", "Systolic BP (mmHg)"),
+  Min = c(
+    min(alb$URDACT, na.rm = TRUE),
+    min(bio$LBXSCR, na.rm = TRUE),
+    min(ghb$LBXGH, na.rm = TRUE),
+    min(bmx$BMXBMI, na.rm = TRUE),
+    min(bpxo$BPXOSY1, na.rm = TRUE)
+  ),
+  Median = c(
+    median(alb$URDACT, na.rm = TRUE),
+    median(bio$LBXSCR, na.rm = TRUE),
+    median(ghb$LBXGH, na.rm = TRUE),
+    median(bmx$BMXBMI, na.rm = TRUE),
+    median(bpxo$BPXOSY1, na.rm = TRUE)
+  ),
+  Max = c(
+    max(alb$URDACT, na.rm = TRUE),
+    max(bio$LBXSCR, na.rm = TRUE),
+    max(ghb$LBXGH, na.rm = TRUE),
+    max(bmx$BMXBMI, na.rm = TRUE),
+    max(bpxo$BPXOSY1, na.rm = TRUE)
+  )
+)
+
+knitr::kable(
+  range_checks,
+  digits = 1,
+  col.names = c("Variable", "Minimum", "Median", "Maximum"),
+  caption = "Observed ranges of key continuous variables"
+)
+```
+The highest values observed are large but remain within ranges reported in clinical populations (ACR values above 5 000 mg/g can occur in the nephrotic range; creatinine values above 5 mg/dL and systolic readings above 200 mmHg are uncommon but physiologically possible). No records are removed during the source-data assessment.
+
+## Component linkage and measurement availability
+
+NHANES components can be linked through the participant identifier `SEQN`. Before defining any study eligibility criteria, we assessed whether records in each selected component have a matching demographic record, and how many linked records belong to adults aged 20 years or older. This is a source-data linkage assessment, **not** a participant eligibility flow.
+
+```{r linkage-assessment}
+components <- list(
+  DEMO_L=demo, ALB_CR_L=alb, BIOPRO_L=bio, GHB_L=ghb,
+  BMX_L=bmx, BPXO_L=bpxo, DIQ_L=diq, BPQ_L=bpq, SMQ_L=smq
+)
+linkage_summary <- dplyr::bind_rows(lapply(names(components), function(component) {
+  x <- components[[component]]
+  matched <- x$SEQN %in% demo$SEQN
+  adults <- x$SEQN %in% demo$SEQN[!is.na(demo$RIDAGEYR) & demo$RIDAGEYR >= 20]
+  tibble(
+    Component=component,
+    `Source records`=nrow(x),
+    `Unique SEQN`=dplyr::n_distinct(x$SEQN),
+    `N linked to demographics`=sum(matched),
+    `Matched adults (age >=20)`=sum(adults)
+  )
+}))
+knitr::kable(
+  linkage_summary,
+  caption = "Record linkage to demographics and adult coverage by source component. Counts in the linkage column show the number of records whose participant identifier (SEQN) was found in the demographics file."
+)
+```
+
+
+Because ACR and serum creatinine are essential to the proposed research question, we also assessed their **joint availability among adults**, rather than only their separate component-level missingness.
+
+```{r joint-availability}
+availability <- demo %>%
+  filter(!is.na(RIDAGEYR), RIDAGEYR >= 20) %>%
+  select(SEQN) %>%
+  left_join(alb %>% select(SEQN, URDACT), by="SEQN") %>%
+  left_join(bio %>% select(SEQN, LBXSCR), by="SEQN")
+availability_summary <- tibble(
+  Assessment=c("Adults in demographics",
+               "Adults with ACR measured",
+               "Adults with serum creatinine measured",
+               "Adults with both ACR and serum creatinine measured"),
+  N=c(nrow(availability),
+      sum(!is.na(availability$URDACT)),
+      sum(!is.na(availability$LBXSCR)),
+      sum(!is.na(availability$URDACT) & !is.na(availability$LBXSCR)))
+)
+knitr::kable(availability_summary,
+  caption="Joint availability of the two essential kidney measurements among adults")
+```
+
+These counts describe the feasibility of linking required measurements. They do not apply eGFR thresholds, metabolic risk criteria or other eligibility rules. The participant inclusion/exclusion flow will be produced during ARD construction.
+
+## Summary of source-data assessment
+
+The selected NHANES August 2021–August 2023 files provide source variables for urinary ACR, serum creatinine, HbA1c, BMI, repeated blood-pressure readings, relevant questionnaire responses, demographics and survey design. The component-level summaries above describe measurement availability, observed ranges and response coding; the linkage assessment examines coverage across files.
+
+Missing values on the medication items are structural: the questions are asked only after a positive answer to the diagnosis item. Missingness on serum creatinine and HbA1c reflects participants who did not provide a blood sample. Observed ranges for the continuous measures are physiologically plausible. No records were excluded during this source-data assessment.
+
+The source files are suitable for constructing the study population and analysis variables. Subsequent work will apply the eligibility criteria, define the derived variables and document the inclusion flow.
