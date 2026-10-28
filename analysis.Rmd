@@ -21,10 +21,21 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r packages, include=FALSE}
+```{r install-packages, include=FALSE}
+pkgs <- c("haven", "dplyr", "DT")
+
+for (p in pkgs) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    install.packages(p)
+  }
+
+}
+```
+
+```{r include-packages}
 library(haven)
 library(dplyr)
-
+library(DT)
 ```
 
 ## Data sources
@@ -532,7 +543,7 @@ Among 7 809 adults aged 20 years or older, serum creatinine was available for 5 
 
 #### Blood pressure
 
-Blood pressure was assessed using the NHANES oscillometric examination protocol. Following five minutes of seated rest, up to three consecutive systolic and diastolic measurements were obtained approximately 60 seconds apart with an automated upper-arm device. Mean systolic and mean diastolic blood pressure were calculated separately from all available non-missing readings; the first reading was not routinely excluded. Participants with no available readings for a given measure were assigned a missing mean value. All measurements were expressed in mmHg.
+Blood pressure was assessed using the NHANES oscillometric examination protocol. Following five minutes of seated rest, up to three consecutive systolic and diastolic measurements were obtained approximately 60 seconds apart with an automated upper-arm device. Mean systolic and mean diastolic blood pressure were calculated separately from all available non-missing readings. The large majority of adults with blood-pressure data had all three readings; a small number had only one or two. The first reading was retained whenever it was present. Participants with no available readings for a given measure were assigned a missing mean value.
 ```{r derive-bp-measure}
 ard <- ard %>%
   mutate(
@@ -569,8 +580,14 @@ knitr::kable(
 )
 ```
 
-Among 7,809 adults aged 20 years or older, mean systolic and diastolic blood pressure could be calculated for 5,863 participants (75.1%). Median systolic blood pressure was 120.3 mmHg (range 70–232.3 mmHg), while median diastolic blood pressure was 74.0 mmHg (range 34–139 mmHg). Participants without valid blood-pressure measurements retained missing values rather than being assigned a value of zero. These derived measurements will contribute to the hypertension definition and subsequent statistical analysis.
-
+```{r temp}
+tibble(
+  Readings = c("Three", "Two", "One"),
+  N = c(5842, 15, 6)
+) %>%
+  knitr::kable(caption = "Number of available blood-pressure readings among adults with a calculated mean")
+```
+Among 7,809 adults aged 20 years or older, mean systolic and diastolic blood pressure could be calculated for 5,863 participants (75.1 %). Median systolic blood pressure was 120.3 mmHg (range 70–232.3 mmHg) and median diastolic blood pressure was 74.0 mmHg (range 34–139 mmHg). The observed extremes are uncommon but remain physiologically possible; no values were excluded at this stage. Participants without valid measurements retained missing values rather than being assigned zero. These derived measurements will contribute to the hypertension definition and subsequent analyses. Of the 5,863 adults for whom mean blood pressure was calculated, 5,842 had three systolic and three diastolic measurements, 15 had two of each, and 6 had one of each.
 
 #### Metabolic risk factors
 
@@ -628,7 +645,7 @@ knitr::kable(
 )
 ```
 
-Among 7 809 adults aged 20 years or older, 1 312 (16.8 %) met the diabetes definition, 4 587 (58.7 %) were classified as not having diabetes, and 1 910 (24.5 %) had insufficient information for a definitive classification.
+Among 7,809 adults aged 20 years or older, 1,312 (16.8 %) met the diabetes definition, 4,587 (58.7 %) were classified as not having diabetes, and 1,910 (24.5 %) had insufficient information for a definitive classification.
 
 
 ##### Hypertension
@@ -646,6 +663,7 @@ Hypertension was classified as **absent** only when both of the following held:
 - both mean systolic and mean diastolic blood pressure were measured and were below the thresholds above.
 
 When a participant reported no diagnosis, the medication item was not asked; the resulting structural missingness was treated as non-informative. In all other cases hypertension status was left **indeterminate**.
+The blood-pressure thresholds follow the 2017 ACC/AHA guideline definition of hypertension (≥130/80 mmHg).
 
 
 ```{r htn-derive}
@@ -726,15 +744,11 @@ knitr::kable(
   caption = "Obesity phenotype among adults"
 )
 ```
-Among 7 809 adults aged 20 years or older, 2 455 (31.4 %) met the BMI criterion for obesity and 3 515 (45.0 %) had BMI below 30 kg/m². Obesity status was indeterminate for 1 839 participants (23.5 %) because BMI measurements were unavailable. These classifications were derived before application of the full study eligibility criteria.
+Among 7,809 adults aged 20 years or older, 2,455 (31.4 %) met the BMI criterion for obesity and 3,515 (45.0 %) had BMI below 30 kg/m². Obesity status was indeterminate for 1,839 participants (23.5 %) because BMI measurements were unavailable. These classifications were derived before application of the full study eligibility criteria.
 
 ##### Combined metabolic risk
 
-Overall metabolic risk was classified as **present** if at least one of the three phenotypes (diabetes, hypertension or obesity) was present, regardless of the status of the others.  
-
-It was classified as **absent** only when all three phenotypes were absent.  
-
-Participants who had no positive phenotype and at least one indeterminate phenotype were classified as **indeterminate**.
+The three phenotypes were combined into a single indicator variable (`metabolic_risk`). As discussed earlier, a participant was classified as having metabolic risk if at least one phenotype was present. The indicator was absent only when all three phenotypes were absent, and indeterminate otherwise.
 
 
 ```{r metabolic-risk-derive}
@@ -771,11 +785,11 @@ stopifnot(
   )
 )
 ```
-Among 7809 adults aged 20 years or older, 5 021 (64.3 %) met at least one criterion for diabetes, hypertension or obesity. All three phenotypes were classified as absent in 1 551 participants (19.9 %), while metabolic-risk status remained indeterminate for 1237 (15.8 %). These results describe metabolic-risk classification before application of the kidney-function and albuminuria eligibility criteria.
+Among 7,809 adults aged 20 years or older, 5,021 (64.3 %) met at least one criterion for diabetes, hypertension or obesity. All three phenotypes were classified as absent in 1,551 participants (19.9 %), while metabolic-risk status remained indeterminate for 1,237 (15.8 %). These results describe metabolic-risk classification before application of the kidney-function and albuminuria eligibility criteria.
 
 #### Demographic, laboratory and smoking variables
 
-Age (years), sex and race/ethnicity were taken from the demographic file and retained in their original NHANES coding. Glycated haemoglobin (HbA1c, %), body mass index (BMI, kg/m²) and mean systolic blood pressure (mmHg) were retained as continuous covariates.
+Age (years), sex and race/ethnicity were taken from the demographic file and retained in their original NHANES coding. Glycated haemoglobin (HbA1c, %), body mass index (BMI, kg/m²) and derived mean systolic blood pressure (mmHg) were retained as continuous covariates.
 
 ##### Smoking status
 
@@ -826,6 +840,8 @@ The study population was drawn from participants in NHANES August 2021–August 
 - estimated glomerular filtration rate (eGFR) ≥ 60 mL/min/1.73 m² (CKD-EPI 2021), and  
 - at least one metabolic risk factor (diabetes, hypertension or obesity).
 
+Age ≥ 20 years was selected as the adult threshold, consistent with its use in major NHANES analyses of chronic kidney disease and metabolic risk factors (e.g., USRDS CKD surveillance reports; Wang et al., 2020).
+
 Participants lacking the measurements required to establish kidney-function or albuminuria eligibility were excluded. Metabolic-risk eligibility required at least one positively identified phenotype; participants with no confirmed metabolic risk factor, including those with indeterminate overall metabolic-risk status, were not eligible. Missing values in covariates intended for later regression analysis did not constitute exclusion criteria.
 
 Eligibility criteria were applied sequentially, and the number of participants remaining at each step was recorded to document cohort selection.
@@ -871,7 +887,7 @@ knitr::kable(
   caption = "Participant selection flow"
 )
 ```
-Of the 11 933 participants in the demographic file, 7 809 were aged 20 years or older. Following sequential application of the kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3 386 participants remained in the eligible study population.
+Of the 11,933 participants in the demographic file, 7,809 were aged 20 years or older. Following sequential application of the kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3,386 participants remained in the eligible study population.
 
 ```{r eligibility-event-summary}
 stopifnot(
@@ -889,7 +905,7 @@ ard %>%
 
 ### Missing data
 
-Missingness was assessed among the 3 386 participants who met the study eligibility criteria. The number and percentage of missing values were calculated for the primary outcome and the candidate regression covariates (age, sex, race/ethnicity, HbA1c, mean systolic blood pressure, BMI and smoking status).
+Missingness was assessed among the 3,386 participants who met the study eligibility criteria. The number and percentage of missing values were calculated for the primary outcome and the candidate regression covariates (age, sex, race/ethnicity, HbA1c, mean systolic blood pressure, BMI and smoking status).
 
 Participants were not excluded from the analysis-ready dataset solely because of missing regression covariates. The extent of missingness was documented to inform the subsequent analytical approach.
 
@@ -927,7 +943,7 @@ knitr::kable(
   caption = "Missing data among eligible participants"
 )
 ```
-Among the 3 386 eligible participants, the primary outcome, age, sex, race/ethnicity and HbA1c were complete. Missingness was highest for mean systolic blood pressure (75 participants; 2.2 %), followed by BMI (23; 0.7 %) and smoking status (6; 0.2 %). Overall, missingness among the candidate regression covariates was low. All eligible participants were retained in the analysis-ready dataset regardless of covariate completeness.
+Among the 3,386 eligible participants, the primary outcome, age, sex, race/ethnicity and HbA1c were complete. Missingness was highest for mean systolic blood pressure (75 participants; 2.2 %), followed by BMI (23; 0.7 %) and smoking status (6; 0.2 %). Overall, missingness among the candidate regression covariates was low. All eligible participants were retained in the analysis-ready dataset regardless of covariate completeness.
 
 ### Survey design variables
 
@@ -961,11 +977,11 @@ if (all(survey_check$Present_in_ARD)) {
     )
 }
 ```
-All three survey design variables (WTPH2YR, SDMVSTRA and SDMVPSU) were available for the 3,386 eligible participants. No missing values were identified, and all sampling weights were positive. These variables were retained to support subsequent analyses accounting for the complex NHANES sampling design.
+No missing or non-positive values were identified among the 3,386 eligible participants.
 
 ### Analysis-ready dataset
 
-The analysis-ready dataset was constructed by retaining the 3 386 participants who met all study eligibility criteria. It contains:
+The analysis-ready dataset was constructed by retaining the 3,386 participants who met all study eligibility criteria. It contains:
 
 - the participant identifier and demographic characteristics,  
 - the primary albuminuria outcome and candidate regression variables,  
@@ -986,8 +1002,6 @@ ard_columns <- c(
   "BPQ020", "BPQ150",
   "SMQ020", "SMQ040", "smoking_status",
   "diabetes", "hypertension", "obesity", "metabolic_risk",
-  "eligible_age", "eligible_kidney_measurements",
-  "eligible_egfr", "eligible_metabolic_risk", "eligible_study",
   "WTPH2YR", "SDMVSTRA", "SDMVPSU"
 )
 
@@ -1005,7 +1019,6 @@ stopifnot(
   nrow(ard_final) == 3386,
   !anyNA(ard_final$SEQN),
   !anyDuplicated(ard_final$SEQN),
-  all(ard_final$eligible_study),
   all(ard_final$RIDAGEYR >= 20),
   all(!is.na(ard_final$URDACT)),
   all(!is.na(ard_final$LBXSCR)),
@@ -1027,7 +1040,15 @@ tibble(
   knitr::kable(caption = "Final analysis-ready dataset summary")
 ```
 
-```{r export-ard}
+```{r preview-ard}
+ard_final %>%
+  select(SEQN, RIDAGEYR, RIAGENDR, elevated_acr, egfr, mean_sbp, BMXBMI, smoking_status) %>%
+  head(3) %>%
+  knitr::kable(caption = "Preview of the analysis-ready dataset (first 3 rows, selected columns)")
+
+```
+
+```{r export-ards}
 dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
 
 saveRDS(ard_final, file = "data/processed/nhanes_albuminuria_ard.rds")
@@ -1035,4 +1056,4 @@ saveRDS(ard_final, file = "data/processed/nhanes_albuminuria_ard.rds")
 ard_reloaded <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
 stopifnot(identical(ard_final, ard_reloaded))
 ```
-The final analysis-ready dataset contained 3 386 eligible participants and 38 variables. Elevated albuminuria was identified in 418 participants (12.3 %, unweighted). Integrity checks confirmed participant-level uniqueness, adherence to the eligibility criteria, completeness of the primary outcome and availability of valid survey design variables. The dataset was saved in RDS format for subsequent analyses.
+The final analysis-ready dataset contained 3,386 eligible participants and 33 variables, of whom 418 (12.3 %, unweighted) had elevated albuminuria.
