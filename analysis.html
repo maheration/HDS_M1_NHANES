@@ -7,7 +7,7 @@
 
         <meta name="author" content="Maher" />
     
-        <meta name="date" content="2026-10-27" />
+        <meta name="date" content="2026-10-28" />
     
     <title>Albuminuria among US adults with metabolic risk factors and preserved kidney filtration</title>
 
@@ -1351,12 +1351,23 @@ risk factors and preserved kidney filtration</a></h2>
       <li><a href="#component-linkage-and-measurement-availability" id="toc-component-linkage-and-measurement-availability"><span class="toc-section-number">12</span> Component linkage and
       measurement availability</a></li>
       <li><a href="#summary-of-source-data-assessment" id="toc-summary-of-source-data-assessment"><span class="toc-section-number">13</span> Summary of source-data
-      assessment</a></li>
+      assessment</a>
+      <ul>
+      <li><a href="#data-integration-and-participant-linkage" id="toc-data-integration-and-participant-linkage"><span class="toc-section-number">13.1</span> Data integration and
+      participant linkage</a></li>
+      <li><a href="#study-population-and-eligibility-criteria" id="toc-study-population-and-eligibility-criteria"><span class="toc-section-number">13.2</span> Study population and
+      eligibility criteria</a></li>
+      <li><a href="#missing-data" id="toc-missing-data"><span class="toc-section-number">13.3</span> Missing data</a></li>
+      <li><a href="#survey-design-variables" id="toc-survey-design-variables"><span class="toc-section-number">13.4</span> Survey design
+      variables</a></li>
+      <li><a href="#analysis-ready-dataset" id="toc-analysis-ready-dataset"><span class="toc-section-number">13.5</span> Analysis-ready
+      dataset</a></li>
+      </ul></li>
       </ul>
     </div>
     <div id="postamble" data-toggle="wy-nav-shift" class="status">
                   <p class="author"><span class="glyphicon glyphicon-user"></span> Maher</p>
-                        <p class="date"><span class="glyphicon glyphicon-calendar"></span> 27
+                        <p class="date"><span class="glyphicon glyphicon-calendar"></span> 28
 October 2026</p>
           </div>
    </div>
@@ -2288,6 +2299,816 @@ source-data assessment.</p>
 and analysis variables. Subsequent work will apply the eligibility
 criteria, define the derived variables and document the inclusion
 flow.</p>
+<div id="data-integration-and-participant-linkage" class="section level3" number="13.1">
+<h3><span class="header-section-number">13.1</span> Data integration and
+participant linkage</h3>
+<p>The nine NHANES component files were linked on the unique participant
+identifier (SEQN). The demographic file (DEMO_L) served as the reference
+population. Selected variables from the urine albumin–creatinine,
+biochemistry, glycated haemoglobin, body-measures, blood-pressure
+examination, diabetes questionnaire, blood-pressure questionnaire and
+smoking questionnaire files were joined to the demographic file by left
+join, so that every interviewed participant was retained at this stage.
+Each source file contained a unique SEQN and the joins preserved both
+the original number of demographic records and the uniqueness of
+SEQN.</p>
+<table>
+<caption>Participant uniqueness within each source file</caption>
+<thead>
+<tr class="header">
+<th align="left">File</th>
+<th align="right">Rows</th>
+<th align="right">Unique_SEQN</th>
+<th align="right">Duplicates</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">DEMO_L</td>
+<td align="right">11933</td>
+<td align="right">11933</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">ALB_CR_L</td>
+<td align="right">8493</td>
+<td align="right">8493</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">BIOPRO_L</td>
+<td align="right">7199</td>
+<td align="right">7199</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">GHB_L</td>
+<td align="right">7199</td>
+<td align="right">7199</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">BMX_L</td>
+<td align="right">8860</td>
+<td align="right">8860</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">BPXO_L</td>
+<td align="right">7801</td>
+<td align="right">7801</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">DIQ_L</td>
+<td align="right">11744</td>
+<td align="right">11744</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">BPQ_L</td>
+<td align="right">8501</td>
+<td align="right">8501</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">SMQ_L</td>
+<td align="right">9015</td>
+<td align="right">9015</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>Row count and participant uniqueness after linkage</caption>
+<thead>
+<tr class="header">
+<th align="left">Measure</th>
+<th align="right">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Rows in demographic file</td>
+<td align="right">11933</td>
+</tr>
+<tr class="even">
+<td align="left">Rows after joins</td>
+<td align="right">11933</td>
+</tr>
+<tr class="odd">
+<td align="left">Unique SEQN after joins</td>
+<td align="right">11933</td>
+</tr>
+<tr class="even">
+<td align="left">Duplicate SEQN after joins</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+<p>After linkage the combined dataset contained 11 933 records and 11
+933 unique participant identifiers, with no duplicates. The unchanged
+row count confirmed that no unintended record multiplication occurred.
+Participant-level linkage integrity was therefore established, while
+incomplete availability of measurements and questionnaire items across
+components was retained for later evaluation.</p>
+<div id="kidney-function-and-albuminuria" class="section level4" number="13.1.1">
+<h4><span class="header-section-number">13.1.1</span> Kidney function
+and albuminuria</h4>
+<p>Estimated glomerular filtration rate was calculated from serum
+creatinine (LBXSCR, mg/dL), age and sex using the CKD-EPI 2021
+creatinine equation, which does not include a race coefficient:</p>
+<p><span class="math display">\[
+\text{eGFR} = 142 \times \min(\text{Scr}/\kappa, 1)^{\alpha} \times
+\max(\text{Scr}/\kappa, 1)^{-1.200} \times 0.9938^{\text{Age}} \times
+1.012^{\text{[female]}}
+\]</span></p>
+<p>where Scr is serum creatinine in mg/dL, <span class="math inline">\(\kappa = 0.7\)</span> (female) or <span class="math inline">\(0.9\)</span> (male), and <span class="math inline">\(\alpha = -0.241\)</span> (female) or <span class="math inline">\(-0.302\)</span> (male). The equation was applied
+only to participants aged 20 years or older with non-missing serum
+creatinine and recorded sex; eGFR was set to missing otherwise. Urine
+albumin-to-creatinine ratio (URDACT, mg/g) was retained as a continuous
+variable. Elevated albuminuria was defined as ACR ≥ 30 mg/g among
+participants with a non-missing ACR.</p>
+<table>
+<caption>Kidney function and albuminuria: availability and distribution
+after derivation</caption>
+<colgroup>
+<col width="8%" />
+<col width="17%" />
+<col width="11%" />
+<col width="8%" />
+<col width="11%" />
+<col width="8%" />
+<col width="12%" />
+<col width="10%" />
+<col width="11%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">n_adults</th>
+<th align="right">n_with_creatinine</th>
+<th align="right">n_with_egfr</th>
+<th align="right">egfr_min</th>
+<th align="right">egfr_median</th>
+<th align="right">egfr_max</th>
+<th align="right">n_egfr_lt_60</th>
+<th align="right">n_with_acr</th>
+<th align="right">n_acr_ge_30</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">7809</td>
+<td align="right">5443</td>
+<td align="right">5443</td>
+<td align="right">3.5</td>
+<td align="right">93.6</td>
+<td align="right">143.4</td>
+<td align="right">477</td>
+<td align="right">5910</td>
+<td align="right">721</td>
+</tr>
+</tbody>
+</table>
+<p>Among 7 809 adults aged 20 years or older, serum creatinine was
+available for 5 443 participants, all of whom had sufficient information
+for calculation of eGFR. Median eGFR was 93.6 mL/min/1.73 m² (range
+3.5–143.4), and 477 participants had eGFR below 60 mL/min/1.73 m². Urine
+ACR was available for 5 910 adults, of whom 721 (12.2 %) had elevated
+albuminuria (ACR ≥ 30 mg/g). These figures describe measurement
+availability and kidney-related characteristics before application of
+the full study eligibility criteria.</p>
+</div>
+<div id="blood-pressure" class="section level4" number="13.1.2">
+<h4><span class="header-section-number">13.1.2</span> Blood
+pressure</h4>
+<p>Blood pressure was assessed using the NHANES oscillometric
+examination protocol. Following five minutes of seated rest, up to three
+consecutive systolic and diastolic measurements were obtained
+approximately 60 seconds apart with an automated upper-arm device. Mean
+systolic and mean diastolic blood pressure were calculated separately
+from all available non-missing readings; the first reading was not
+routinely excluded. Participants with no available readings for a given
+measure were assigned a missing mean value. All measurements were
+expressed in mmHg.</p>
+<table>
+<caption>Availability and distribution of mean blood-pressure
+measurements among adults</caption>
+<colgroup>
+<col width="10%" />
+<col width="12%" />
+<col width="12%" />
+<col width="9%" />
+<col width="12%" />
+<col width="9%" />
+<col width="9%" />
+<col width="12%" />
+<col width="9%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">n_adults</th>
+<th align="right">n_with_sbp</th>
+<th align="right">n_with_dbp</th>
+<th align="right">sbp_min</th>
+<th align="right">sbp_median</th>
+<th align="right">sbp_max</th>
+<th align="right">dbp_min</th>
+<th align="right">dbp_median</th>
+<th align="right">dbp_max</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">7809</td>
+<td align="right">5863</td>
+<td align="right">5863</td>
+<td align="right">70</td>
+<td align="right">120.3</td>
+<td align="right">232.3</td>
+<td align="right">34</td>
+<td align="right">74</td>
+<td align="right">139</td>
+</tr>
+</tbody>
+</table>
+<p>Among 7,809 adults aged 20 years or older, mean systolic and
+diastolic blood pressure could be calculated for 5,863 participants
+(75.1%). Median systolic blood pressure was 120.3 mmHg (range 70–232.3
+mmHg), while median diastolic blood pressure was 74.0 mmHg (range 34–139
+mmHg). Participants without valid blood-pressure measurements retained
+missing values rather than being assigned a value of zero. These derived
+measurements will contribute to the hypertension definition and
+subsequent statistical analysis.</p>
+</div>
+<div id="metabolic-risk-factors" class="section level4" number="13.1.3">
+<h4><span class="header-section-number">13.1.3</span> Metabolic risk
+factors</h4>
+<p>Metabolic risk was defined using three non-mutually exclusive
+clinical phenotypes: diabetes, hypertension and obesity. These
+conditions identify adults with established metabolic risk factors
+associated with kidney disease, consistent with the study objective of
+examining albuminuria among individuals with preserved estimated kidney
+function.</p>
+<p>Each phenotype was constructed from questionnaire responses, clinical
+measurements and, where applicable, medication-use information.
+Classification followed three rules:</p>
+<ul>
+<li><strong>Present</strong> — at least one defining criterion was
+positive, even if other components were missing.<br />
+</li>
+<li><strong>Absent</strong> — the available information met the
+phenotype-specific criteria for a negative classification, taking
+account of questionnaire skip patterns.<br />
+</li>
+<li><strong>Indeterminate</strong> — neither presence nor absence could
+be established.</li>
+</ul>
+<p>Overall metabolic risk was defined as the presence of at least one of
+the three phenotypes. This approach avoided treating incomplete
+information as evidence that a condition was absent.</p>
+<div id="diabetes" class="section level5" number="13.1.3.1">
+<h5><span class="header-section-number">13.1.3.1</span> Diabetes</h5>
+<p>Diabetes was classified as <strong>present</strong> if any of the
+following was true:</p>
+<ul>
+<li>self-reported physician diagnosis (DIQ010 = 1),
+<strong>or</strong></li>
+<li>HbA1c ≥ 6.5 %, <strong>or</strong></li>
+<li>current insulin use (DIQ050 = 1), <strong>or</strong></li>
+<li>current use of diabetes pills (DIQ070 = 1).</li>
+</ul>
+<p>Diabetes was classified as <strong>absent</strong> only when both of
+the following held:</p>
+<ul>
+<li>the participant reported no diagnosis (DIQ010 = 2),
+<strong>and</strong></li>
+<li>HbA1c was measured and was below 6.5 %.</li>
+</ul>
+<p>When a participant reported no diagnosis, the medication items were
+not asked; the resulting structural missingness was treated as
+non-informative. In all other cases diabetes status was left
+<strong>indeterminate</strong>.</p>
+<table>
+<caption>Diabetes phenotype among adults</caption>
+<thead>
+<tr class="header">
+<th align="left">diabetes</th>
+<th align="right">N</th>
+<th align="right">pct</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Absent</td>
+<td align="right">4587</td>
+<td align="right">58.7</td>
+</tr>
+<tr class="even">
+<td align="left">Present</td>
+<td align="right">1312</td>
+<td align="right">16.8</td>
+</tr>
+<tr class="odd">
+<td align="left">Indeterminate</td>
+<td align="right">1910</td>
+<td align="right">24.5</td>
+</tr>
+</tbody>
+</table>
+<p>Among 7 809 adults aged 20 years or older, 1 312 (16.8 %) met the
+diabetes definition, 4 587 (58.7 %) were classified as not having
+diabetes, and 1 910 (24.5 %) had insufficient information for a
+definitive classification.</p>
+</div>
+<div id="hypertension" class="section level5" number="13.1.3.2">
+<h5><span class="header-section-number">13.1.3.2</span>
+Hypertension</h5>
+<p>Hypertension was classified as <strong>present</strong> if any of the
+following was true:</p>
+<ul>
+<li>self-reported physician diagnosis (BPQ020 = 1),
+<strong>or</strong></li>
+<li>current use of prescribed medication for high blood pressure (BPQ150
+= 1), <strong>or</strong></li>
+<li>mean systolic blood pressure ≥ 130 mmHg, <strong>or</strong></li>
+<li>mean diastolic blood pressure ≥ 80 mmHg.</li>
+</ul>
+<p>Hypertension was classified as <strong>absent</strong> only when both
+of the following held:</p>
+<ul>
+<li>the participant reported no previous diagnosis (BPQ020 = 2),
+<strong>and</strong></li>
+<li>both mean systolic and mean diastolic blood pressure were measured
+and were below the thresholds above.</li>
+</ul>
+<p>When a participant reported no diagnosis, the medication item was not
+asked; the resulting structural missingness was treated as
+non-informative. In all other cases hypertension status was left
+<strong>indeterminate</strong>.</p>
+<table>
+<caption>Hypertension phenotype among adults</caption>
+<thead>
+<tr class="header">
+<th align="left">hypertension</th>
+<th align="right">N</th>
+<th align="right">pct</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Absent</td>
+<td align="right">2489</td>
+<td align="right">31.9</td>
+</tr>
+<tr class="even">
+<td align="left">Present</td>
+<td align="right">4085</td>
+<td align="right">52.3</td>
+</tr>
+<tr class="odd">
+<td align="left">Indeterminate</td>
+<td align="right">1235</td>
+<td align="right">15.8</td>
+</tr>
+</tbody>
+</table>
+<p>Among 7809 adults aged 20 years or older, 4085 (52.3 %) met at least
+one criterion for hypertension and 2 489 (31.9 %) were classified as not
+having hypertension. Hypertension status remained indeterminate for 1235
+participants (15.8 %) because the available information was insufficient
+to establish either presence or absence. These classifications were
+derived before application of the full study eligibility criteria.</p>
+</div>
+<div id="obesity" class="section level5" number="13.1.3.3">
+<h5><span class="header-section-number">13.1.3.3</span> Obesity</h5>
+<p>Obesity was classified as <strong>present</strong> if body mass index
+(BMI) was ≥ 30 kg/m² (BMXBMI).</p>
+<p>Obesity was classified as <strong>absent</strong> if BMI was measured
+and was below 30 kg/m².</p>
+<p>Participants without a valid BMI measurement were classified as
+<strong>indeterminate</strong>. BMI was also retained as a continuous
+variable for later analysis.</p>
+<table>
+<caption>Obesity phenotype among adults</caption>
+<thead>
+<tr class="header">
+<th align="left">obesity</th>
+<th align="right">N</th>
+<th align="right">pct</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Absent</td>
+<td align="right">3515</td>
+<td align="right">45.0</td>
+</tr>
+<tr class="even">
+<td align="left">Present</td>
+<td align="right">2455</td>
+<td align="right">31.4</td>
+</tr>
+<tr class="odd">
+<td align="left">Indeterminate</td>
+<td align="right">1839</td>
+<td align="right">23.5</td>
+</tr>
+</tbody>
+</table>
+<p>Among 7 809 adults aged 20 years or older, 2 455 (31.4 %) met the BMI
+criterion for obesity and 3 515 (45.0 %) had BMI below 30 kg/m². Obesity
+status was indeterminate for 1 839 participants (23.5 %) because BMI
+measurements were unavailable. These classifications were derived before
+application of the full study eligibility criteria.</p>
+</div>
+<div id="combined-metabolic-risk" class="section level5" number="13.1.3.4">
+<h5><span class="header-section-number">13.1.3.4</span> Combined
+metabolic risk</h5>
+<p>Overall metabolic risk was classified as <strong>present</strong> if
+at least one of the three phenotypes (diabetes, hypertension or obesity)
+was present, regardless of the status of the others.</p>
+<p>It was classified as <strong>absent</strong> only when all three
+phenotypes were absent.</p>
+<p>Participants who had no positive phenotype and at least one
+indeterminate phenotype were classified as
+<strong>indeterminate</strong>.</p>
+<table>
+<caption>Combined metabolic-risk classification among adults</caption>
+<thead>
+<tr class="header">
+<th align="left">metabolic_risk</th>
+<th align="right">N</th>
+<th align="right">pct</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Absent</td>
+<td align="right">1551</td>
+<td align="right">19.9</td>
+</tr>
+<tr class="even">
+<td align="left">Present</td>
+<td align="right">5021</td>
+<td align="right">64.3</td>
+</tr>
+<tr class="odd">
+<td align="left">Indeterminate</td>
+<td align="right">1237</td>
+<td align="right">15.8</td>
+</tr>
+</tbody>
+</table>
+<p>Among 7809 adults aged 20 years or older, 5 021 (64.3 %) met at least
+one criterion for diabetes, hypertension or obesity. All three
+phenotypes were classified as absent in 1 551 participants (19.9 %),
+while metabolic-risk status remained indeterminate for 1237 (15.8 %).
+These results describe metabolic-risk classification before application
+of the kidney-function and albuminuria eligibility criteria.</p>
+</div>
+</div>
+<div id="demographic-laboratory-and-smoking-variables" class="section level4" number="13.1.4">
+<h4><span class="header-section-number">13.1.4</span> Demographic,
+laboratory and smoking variables</h4>
+<p>Age (years), sex and race/ethnicity were taken from the demographic
+file and retained in their original NHANES coding. Glycated haemoglobin
+(HbA1c, %), body mass index (BMI, kg/m²) and mean systolic blood
+pressure (mmHg) were retained as continuous covariates.</p>
+<div id="smoking-status" class="section level5" number="13.1.4.1">
+<h5><span class="header-section-number">13.1.4.1</span> Smoking
+status</h5>
+<p>Smoking status was classified from self-reported lifetime and current
+cigarette use:</p>
+<ul>
+<li><strong>Never</strong> — smoked fewer than 100 cigarettes in
+lifetime (SMQ020 = 2).<br />
+</li>
+<li><strong>Former</strong> — smoked at least 100 cigarettes (SMQ020 =
+1) and now smokes not at all (SMQ040 = 3).<br />
+</li>
+<li><strong>Current</strong> — smoked at least 100 cigarettes (SMQ020 =
+1) and now smokes every day or some days (SMQ040 = 1 or 2).</li>
+</ul>
+<p>Participants with insufficient information were left unclassified
+(missing).</p>
+<table>
+<caption>Smoking status among adults</caption>
+<thead>
+<tr class="header">
+<th align="left">smoking_status</th>
+<th align="right">N</th>
+<th align="right">pct</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Never</td>
+<td align="right">4547</td>
+<td align="right">58.2</td>
+</tr>
+<tr class="even">
+<td align="left">Former</td>
+<td align="right">2050</td>
+<td align="right">26.3</td>
+</tr>
+<tr class="odd">
+<td align="left">Current</td>
+<td align="right">1183</td>
+<td align="right">15.1</td>
+</tr>
+<tr class="even">
+<td align="left">NA</td>
+<td align="right">29</td>
+<td align="right">0.4</td>
+</tr>
+</tbody>
+</table>
+<p>Among 7,809 adults aged 20 years or older, 4,547 (58.2%) were
+classified as never smokers, 2,050 (26.3%) as former smokers and 1,183
+(15.1%) as current smokers. Smoking status could not be determined for
+29 participants (0.4%) because the available questionnaire responses
+were insufficient for classification. These figures describe the adult
+source population before application of the study eligibility
+criteria.</p>
+</div>
+</div>
+</div>
+<div id="study-population-and-eligibility-criteria" class="section level3" number="13.2">
+<h3><span class="header-section-number">13.2</span> Study population and
+eligibility criteria</h3>
+<p>The study population was drawn from participants in NHANES August
+2021–August 2023. Eligibility required all of the following:</p>
+<ul>
+<li>age ≥ 20 years,<br />
+</li>
+<li>a valid urine albumin-to-creatinine ratio (ACR) and serum creatinine
+measurement,<br />
+</li>
+<li>estimated glomerular filtration rate (eGFR) ≥ 60 mL/min/1.73 m²
+(CKD-EPI 2021), and<br />
+</li>
+<li>at least one metabolic risk factor (diabetes, hypertension or
+obesity).</li>
+</ul>
+<p>Participants lacking the measurements required to establish
+kidney-function or albuminuria eligibility were excluded. Metabolic-risk
+eligibility required at least one positively identified phenotype;
+participants with no confirmed metabolic risk factor, including those
+with indeterminate overall metabolic-risk status, were not eligible.
+Missing values in covariates intended for later regression analysis did
+not constitute exclusion criteria.</p>
+<p>Eligibility criteria were applied sequentially, and the number of
+participants remaining at each step was recorded to document cohort
+selection.</p>
+<table>
+<caption>Participant selection flow</caption>
+<thead>
+<tr class="header">
+<th align="left">Step</th>
+<th align="right">N</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Demographic file</td>
+<td align="right">11933</td>
+</tr>
+<tr class="even">
+<td align="left">Adults aged ≥ 20 years</td>
+<td align="right">7809</td>
+</tr>
+<tr class="odd">
+<td align="left">Valid ACR and serum creatinine</td>
+<td align="right">5343</td>
+</tr>
+<tr class="even">
+<td align="left">eGFR ≥ 60 mL/min/1.73 m²</td>
+<td align="right">4889</td>
+</tr>
+<tr class="odd">
+<td align="left">≥ 1 metabolic risk factor (final eligible
+population)</td>
+<td align="right">3386</td>
+</tr>
+</tbody>
+</table>
+<p>Of the 11 933 participants in the demographic file, 7 809 were aged
+20 years or older. Following sequential application of the
+kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3 386
+participants remained in the eligible study population.</p>
+<table>
+<caption>Eligible population and primary outcome events</caption>
+<thead>
+<tr class="header">
+<th align="right">Eligible participants</th>
+<th align="right">Elevated albuminuria (ACR ≥ 30)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">3386</td>
+<td align="right">418</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="missing-data" class="section level3" number="13.3">
+<h3><span class="header-section-number">13.3</span> Missing data</h3>
+<p>Missingness was assessed among the 3 386 participants who met the
+study eligibility criteria. The number and percentage of missing values
+were calculated for the primary outcome and the candidate regression
+covariates (age, sex, race/ethnicity, HbA1c, mean systolic blood
+pressure, BMI and smoking status).</p>
+<p>Participants were not excluded from the analysis-ready dataset solely
+because of missing regression covariates. The extent of missingness was
+documented to inform the subsequent analytical approach.</p>
+<table>
+<caption>Missing data among eligible participants</caption>
+<thead>
+<tr class="header">
+<th align="left">Variable</th>
+<th align="right">Missing_N</th>
+<th align="right">Total_N</th>
+<th align="right">Missing_pct</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Elevated albuminuria</td>
+<td align="right">0</td>
+<td align="right">3386</td>
+<td align="right">0.0</td>
+</tr>
+<tr class="even">
+<td align="left">Age</td>
+<td align="right">0</td>
+<td align="right">3386</td>
+<td align="right">0.0</td>
+</tr>
+<tr class="odd">
+<td align="left">Sex</td>
+<td align="right">0</td>
+<td align="right">3386</td>
+<td align="right">0.0</td>
+</tr>
+<tr class="even">
+<td align="left">Race/ethnicity</td>
+<td align="right">0</td>
+<td align="right">3386</td>
+<td align="right">0.0</td>
+</tr>
+<tr class="odd">
+<td align="left">HbA1c</td>
+<td align="right">0</td>
+<td align="right">3386</td>
+<td align="right">0.0</td>
+</tr>
+<tr class="even">
+<td align="left">Mean systolic blood pressure</td>
+<td align="right">75</td>
+<td align="right">3386</td>
+<td align="right">2.2</td>
+</tr>
+<tr class="odd">
+<td align="left">BMI</td>
+<td align="right">23</td>
+<td align="right">3386</td>
+<td align="right">0.7</td>
+</tr>
+<tr class="even">
+<td align="left">Smoking status</td>
+<td align="right">6</td>
+<td align="right">3386</td>
+<td align="right">0.2</td>
+</tr>
+</tbody>
+</table>
+<p>Among the 3 386 eligible participants, the primary outcome, age, sex,
+race/ethnicity and HbA1c were complete. Missingness was highest for mean
+systolic blood pressure (75 participants; 2.2 %), followed by BMI (23;
+0.7 %) and smoking status (6; 0.2 %). Overall, missingness among the
+candidate regression covariates was low. All eligible participants were
+retained in the analysis-ready dataset regardless of covariate
+completeness.</p>
+</div>
+<div id="survey-design-variables" class="section level3" number="13.4">
+<h3><span class="header-section-number">13.4</span> Survey design
+variables</h3>
+<p>The NHANES August 2021–August 2023 complex sampling design was
+accommodated by retaining the survey sampling weights, masked variance
+strata and primary sampling unit identifiers. The two-year phlebotomy
+sampling weight (WTPH2YR) was selected because the study required
+laboratory measurements obtained from blood specimens (serum creatinine
+and HbA1c). The masked stratum (SDMVSTRA) and primary sampling unit
+(SDMVPSU) variables were retained for subsequent survey-weighted
+analyses.</p>
+<table>
+<caption>Availability of NHANES survey design variables</caption>
+<thead>
+<tr class="header">
+<th align="left">Variable</th>
+<th align="left">Present_in_ARD</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">WTPH2YR</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="even">
+<td align="left">SDMVSTRA</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="odd">
+<td align="left">SDMVPSU</td>
+<td align="left">TRUE</td>
+</tr>
+</tbody>
+</table>
+<table>
+<caption>Survey design variable completeness among eligible
+participants</caption>
+<colgroup>
+<col width="15%" />
+<col width="20%" />
+<col width="26%" />
+<col width="21%" />
+<col width="16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">Eligible_N</th>
+<th align="right">Missing_weight</th>
+<th align="right">Nonpositive_weight</th>
+<th align="right">Missing_stratum</th>
+<th align="right">Missing_PSU</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">3386</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+<p>All three survey design variables (WTPH2YR, SDMVSTRA and SDMVPSU)
+were available for the 3,386 eligible participants. No missing values
+were identified, and all sampling weights were positive. These variables
+were retained to support subsequent analyses accounting for the complex
+NHANES sampling design.</p>
+</div>
+<div id="analysis-ready-dataset" class="section level3" number="13.5">
+<h3><span class="header-section-number">13.5</span> Analysis-ready
+dataset</h3>
+<p>The analysis-ready dataset was constructed by retaining the 3 386
+participants who met all study eligibility criteria. It contains:</p>
+<ul>
+<li>the participant identifier and demographic characteristics,<br />
+</li>
+<li>the primary albuminuria outcome and candidate regression
+variables,<br />
+</li>
+<li>derived clinical and metabolic-risk indicators,<br />
+</li>
+<li>the original measurements and questionnaire responses used to
+construct those indicators, and<br />
+</li>
+<li>the NHANES survey design variables.</li>
+</ul>
+<p>Participants were not excluded solely because of missing regression
+covariates. The dataset was checked for participant-level uniqueness,
+eligibility consistency, outcome completeness and availability of survey
+design variables, then saved in RDS format for subsequent analyses.</p>
+<table>
+<caption>Final analysis-ready dataset summary</caption>
+<thead>
+<tr class="header">
+<th align="right">Participants</th>
+<th align="right">Variables</th>
+<th align="right">Unique_participants</th>
+<th align="right">Elevated_albuminuria</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">3386</td>
+<td align="right">38</td>
+<td align="right">3386</td>
+<td align="right">418</td>
+</tr>
+</tbody>
+</table>
+<p>The final analysis-ready dataset contained 3 386 eligible
+participants and 38 variables, including 418 events of elevated
+albuminuria. Integrity checks confirmed participant-level uniqueness,
+adherence to the eligibility criteria, completeness of the primary
+outcome and availability of valid survey design variables. The dataset
+was saved in RDS format for subsequent analyses.</p>
+</div>
 </div>
 </div>
 
