@@ -452,8 +452,8 @@ uniqueness_check <- bind_rows(lapply(names(source_files), function(nm) {
 
 # Merge, retaining only the variables required for subsequent derivation
 ard <- demo %>%
-  select(SEQN, RIDAGEYR, RIAGENDR, RIDRETH3,
-         SDMVSTRA, SDMVPSU, WTINT2YR, WTMEC2YR) %>%
+  select(SEQN, RIDAGEYR, RIAGENDR, RIDRETH3, RIDEXPRG,
+       SDMVSTRA, SDMVPSU, WTINT2YR, WTMEC2YR) %>%
   left_join(alb  %>% select(SEQN, URDACT), by = "SEQN") %>%
   left_join(bio  %>% select(SEQN, LBXSCR, WTPH2YR), by = "SEQN") %>%
   left_join(ghb  %>% select(SEQN, LBXGH), by = "SEQN") %>%
@@ -610,10 +610,10 @@ Diabetes was classified as **present** if any of the following was true:
 - current insulin use (DIQ050 = 1), **or**
 - current use of diabetes pills (DIQ070 = 1).
 
-Diabetes was classified as **absent** only when both of the following held:
+Diabetes was classified as **absent** in either of the following situations:
 
-- the participant reported no diagnosis (DIQ010 = 2), **and**
-- HbA1c was measured and was below 6.5 %.
+- the participant reported no diagnosis (DIQ010 = 2) **and** HbA1c was measured and below 6.5 %, **or**
+- the participant reported borderline diabetes (DIQ010 = 3), HbA1c was measured and below 6.5 %, **and** neither insulin nor diabetes pills were reported.
 
 When a participant reported no diagnosis, the medication items were not asked; the resulting structural missingness was treated as non-informative. In all other cases diabetes status was left **indeterminate**.
 
@@ -621,10 +621,20 @@ When a participant reported no diagnosis, the medication items were not asked; t
 ard <- ard %>%
   mutate(
     diabetes = case_when(
-      DIQ010 == 1 | LBXGH >= 6.5 | DIQ050 == 1 | DIQ070 == 1 ~ 1,
-      DIQ010 == 2 & !is.na(LBXGH) & LBXGH < 6.5 ~ 0,
-      TRUE ~ NA_real_
-    )
+  # Present
+  DIQ010 == 1 | LBXGH >= 6.5 | DIQ050 == 1 | DIQ070 == 1 ~ 1,
+
+  # Absent: clear negative self-report + measured HbA1c < 6.5
+  DIQ010 == 2 & !is.na(LBXGH) & LBXGH < 6.5 ~ 0,
+
+  # Absent: borderline self-report, no diabetes medication, measured HbA1c < 6.5
+  DIQ010 == 3 & !is.na(LBXGH) & LBXGH < 6.5 &
+    (is.na(DIQ050) | DIQ050 != 1) &
+    (is.na(DIQ070) | DIQ070 != 1) ~ 0,
+
+  # Indeterminate
+  TRUE ~ NA_real_
+)
   )
 
 diabetes_summary <- ard %>%
@@ -645,7 +655,7 @@ knitr::kable(
 )
 ```
 
-Among 7,809 adults aged 20 years or older, 1,312 (16.8 %) met the diabetes definition, 4,587 (58.7 %) were classified as not having diabetes, and 1,910 (24.5 %) had insufficient information for a definitive classification.
+Among 7,809 adults aged 20 years or older, 1,312 (16.8 %) met the diabetes definition, 4,735 (60.6 %) were classified as not having diabetes, and 1,762 (22.6 %) had insufficient information for a definitive classification.
 
 
 ##### Hypertension
@@ -785,7 +795,7 @@ stopifnot(
   )
 )
 ```
-Among 7,809 adults aged 20 years or older, 5,021 (64.3 %) met at least one criterion for diabetes, hypertension or obesity. All three phenotypes were classified as absent in 1,551 participants (19.9 %), while metabolic-risk status remained indeterminate for 1,237 (15.8 %). These results describe metabolic-risk classification before application of the kidney-function and albuminuria eligibility criteria.
+Among 7,809 adults aged 20 years or older, 5,021 (64.3 %) met at least one criterion for diabetes, hypertension or obesity. All three phenotypes were classified as absent in 1,576 participants (20.2 %), while metabolic-risk status remained indeterminate for 1,212 (15.5 %). These results describe metabolic-risk classification before application of the kidney-function and albuminuria eligibility criteria.
 
 #### Demographic, laboratory and smoking variables
 
@@ -833,14 +843,17 @@ Among 7,809 adults aged 20 years or older, 4,547 (58.2%) were classified as neve
 
 ### Study population and eligibility criteria
 
-The study population was drawn from participants in NHANES August 2021–August 2023. Eligibility required all of the following:
+The study population was drawn from participants in NHANES August 2021–August 2023.
 
-- age ≥ 20 years,  
-- a valid urine albumin-to-creatinine ratio (ACR) and serum creatinine measurement,  
-- estimated glomerular filtration rate (eGFR) ≥ 60 mL/min/1.73 m² (CKD-EPI 2021), and  
+Eligibility required all of the following:
+
+- age ≥ 20 years,
+- not currently pregnant,
+- a valid urine albumin-to-creatinine ratio (ACR) and serum creatinine measurement,
+- estimated glomerular filtration rate (eGFR) ≥ 60 mL/min/1.73 m² (CKD-EPI 2021), and
 - at least one metabolic risk factor (diabetes, hypertension or obesity).
 
-Age ≥ 20 years was selected as the adult threshold, consistent with its use in major NHANES analyses of chronic kidney disease and metabolic risk factors (e.g., USRDS CKD surveillance reports; Wang et al., 2020).
+Age ≥ 20 years was selected as the adult threshold, consistent with its use in major NHANES analyses of chronic kidney disease and metabolic risk factors (e.g., USRDS CKD surveillance reports; Wang et al., 2020). Pregnancy was excluded because physiological changes in kidney filtration and albumin excretion during pregnancy can alter the interpretation of both eGFR and ACR; the study objective concerns metabolic risk factors in non-pregnant adults.
 
 Participants lacking the measurements required to establish kidney-function or albuminuria eligibility were excluded. Metabolic-risk eligibility required at least one positively identified phenotype; participants with no confirmed metabolic risk factor, including those with indeterminate overall metabolic-risk status, were not eligible. Missing values in covariates intended for later regression analysis did not constitute exclusion criteria.
 
@@ -850,10 +863,12 @@ Eligibility criteria were applied sequentially, and the number of participants r
 ard <- ard %>%
   mutate(
     eligible_age = !is.na(RIDAGEYR) & RIDAGEYR >= 20,
+    eligible_not_pregnant = is.na(RIDEXPRG) | RIDEXPRG != 1,
     eligible_kidney_measurements = !is.na(URDACT) & !is.na(LBXSCR) & !is.na(egfr),
     eligible_egfr = !is.na(egfr) & egfr >= 60,
     eligible_metabolic_risk = !is.na(metabolic_risk) & metabolic_risk == 1,
     eligible_study = eligible_age &
+                     eligible_not_pregnant &
                      eligible_kidney_measurements &
                      eligible_egfr &
                      eligible_metabolic_risk
@@ -863,6 +878,7 @@ flow <- tibble(
   Step = c(
     "Demographic file",
     "Adults aged ≥ 20 years",
+    "Not pregnant",
     "Valid ACR and serum creatinine",
     "eGFR ≥ 60 mL/min/1.73 m²",
     "≥ 1 metabolic risk factor (final eligible population)"
@@ -870,8 +886,9 @@ flow <- tibble(
   N = c(
     nrow(demo),
     sum(ard$eligible_age, na.rm = TRUE),
-    sum(ard$eligible_age & ard$eligible_kidney_measurements, na.rm = TRUE),
-    sum(ard$eligible_age & ard$eligible_kidney_measurements & ard$eligible_egfr, na.rm = TRUE),
+    sum(ard$eligible_age & ard$eligible_not_pregnant, na.rm = TRUE),
+    sum(ard$eligible_age & ard$eligible_not_pregnant & ard$eligible_kidney_measurements, na.rm = TRUE),
+    sum(ard$eligible_age & ard$eligible_not_pregnant & ard$eligible_kidney_measurements & ard$eligible_egfr, na.rm = TRUE),
     sum(ard$eligible_study, na.rm = TRUE)
   )
 )
@@ -887,7 +904,7 @@ knitr::kable(
   caption = "Participant selection flow"
 )
 ```
-Of the 11,933 participants in the demographic file, 7,809 were aged 20 years or older. Following sequential application of the kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3,386 participants remained in the eligible study population.
+Of the 11,933 participants in the demographic file, 7,809 were aged 20 years or older and 7,768 were not pregnant. Following sequential application of the kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3,370 participants remained in the eligible study population.
 
 ```{r eligibility-event-summary}
 stopifnot(
@@ -905,7 +922,7 @@ ard %>%
 
 ### Missing data
 
-Missingness was assessed among the 3,386 participants who met the study eligibility criteria. The number and percentage of missing values were calculated for the primary outcome and the candidate regression covariates (age, sex, race/ethnicity, HbA1c, mean systolic blood pressure, BMI and smoking status).
+Missingness was assessed among the 3,370 participants who met the study eligibility criteria. The number and percentage of missing values were calculated for the primary outcome and the candidate regression covariates (age, sex, race/ethnicity, HbA1c, mean systolic blood pressure, BMI and smoking status).
 
 Participants were not excluded from the analysis-ready dataset solely because of missing regression covariates. The extent of missingness was documented to inform the subsequent analytical approach.
 
@@ -943,7 +960,7 @@ knitr::kable(
   caption = "Missing data among eligible participants"
 )
 ```
-Among the 3,386 eligible participants, the primary outcome, age, sex, race/ethnicity and HbA1c were complete. Missingness was highest for mean systolic blood pressure (75 participants; 2.2 %), followed by BMI (23; 0.7 %) and smoking status (6; 0.2 %). Overall, missingness among the candidate regression covariates was low. All eligible participants were retained in the analysis-ready dataset regardless of covariate completeness.
+Among the 3,370 eligible participants, the primary outcome, age, sex, race/ethnicity and HbA1c were complete. Missingness was highest for mean systolic blood pressure (75 participants; 2.2 %), followed by BMI (23; 0.7 %) and smoking status (6; 0.2 %). Overall, missingness among the candidate regression covariates was low. All eligible participants were retained in the analysis-ready dataset regardless of covariate completeness.
 
 ### Survey design variables
 
@@ -977,11 +994,11 @@ if (all(survey_check$Present_in_ARD)) {
     )
 }
 ```
-No missing or non-positive values were identified among the 3,386 eligible participants.
+No missing or non-positive values were identified among the 3,370 eligible participants.
 
 ### Analysis-ready dataset
 
-The analysis-ready dataset was constructed by retaining the 3,386 participants who met all study eligibility criteria. It contains:
+The analysis-ready dataset was constructed by retaining the 3,370 participants who met all study eligibility criteria. It contains:
 
 - the participant identifier and demographic characteristics,  
 - the primary albuminuria outcome and candidate regression variables,  
@@ -1016,7 +1033,7 @@ ard_final <- ard %>%
   select(all_of(ard_columns))
 
 stopifnot(
-  nrow(ard_final) == 3386,
+  nrow(ard_final) == 3370,
   !anyNA(ard_final$SEQN),
   !anyDuplicated(ard_final$SEQN),
   all(ard_final$RIDAGEYR >= 20),
@@ -1056,4 +1073,4 @@ saveRDS(ard_final, file = "data/processed/nhanes_albuminuria_ard.rds")
 ard_reloaded <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
 stopifnot(identical(ard_final, ard_reloaded))
 ```
-The final analysis-ready dataset contained 3,386 eligible participants and 33 variables, of whom 418 (12.3 %, unweighted) had elevated albuminuria.
+The final analysis-ready dataset contained 3,370 eligible participants and 33 variables, of whom 417 (12.4 %, unweighted) had elevated albuminuria.
