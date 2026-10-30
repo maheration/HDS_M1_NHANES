@@ -1074,3 +1074,70 @@ ard_reloaded <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
 stopifnot(identical(ard_final, ard_reloaded))
 ```
 The final analysis-ready dataset contained 3,370 eligible participants and 33 variables, of whom 417 (12.4 %, unweighted) had elevated albuminuria.
+
+### Analysis-ready dataset validation
+```{r ard-validation, echo=FALSE}
+ard <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
+
+checks <- tibble::tibble(
+  Check = c(
+    "Participant identifiers complete and unique",
+    "All participants aged ≥20 years",
+    "ACR complete, finite and nonnegative",
+    "Outcome complete and consistent with ACR ≥30 mg/g",
+    "eGFR complete, finite and ≥60 mL/min/1.73 m²",
+    "All participants have confirmed metabolic risk",
+    "Survey weights finite and positive",
+    "Survey strata and PSU identifiers complete",
+    "Dataset dimensions match the final export",
+    "Event count matches the final export"
+  ),
+  Passed = c(
+    !anyNA(ard$SEQN) && !anyDuplicated(ard$SEQN),
+    all(is.finite(ard$RIDAGEYR) & ard$RIDAGEYR >= 20),
+    all(is.finite(ard$URDACT) & ard$URDACT >= 0),
+    !anyNA(ard$elevated_acr) &&
+      all(ard$elevated_acr == (ard$URDACT >= 30)),
+    all(is.finite(ard$egfr) & ard$egfr >= 60),
+    !anyNA(ard$metabolic_risk) &&
+      all(ard$metabolic_risk == 1),
+    all(is.finite(ard$WTPH2YR) & ard$WTPH2YR > 0),
+    !anyNA(ard[c("SDMVSTRA", "SDMVPSU")]),
+    nrow(ard) == 3370 && ncol(ard) == 33,
+    !anyNA(ard$elevated_acr) &&
+      sum(ard$elevated_acr) == 417
+  )
+)
+
+if (!all(checks$Passed)) {
+  stop(
+    "ARD validation failed: ",
+    paste(checks$Check[which(is.na(checks$Passed) |
+                               !checks$Passed)], collapse = "; ")
+  )
+}
+
+checks$Result <- ifelse(checks$Passed, "PASS", "FAIL")
+
+knitr::kable(
+  checks[c("Check", "Result")],
+  caption = "Validation of the exported analysis-ready dataset"
+)
+```
+
+The exported analysis-ready dataset was reloaded and checked for complete and unique participant identifiers, age eligibility, valid ACR and eGFR values, outcome-threshold consistency, confirmed metabolic-risk eligibility, and complete survey-design fields with finite positive weights. All checks passed. The dataset contained **3,370** participants and **417** elevated-albuminuria events, matching the final construction output.
+
+Variable definitions, derivation rules and missing-value conventions are provided in the accompanying metadata file:  
+[`metadata/nhanes_albuminuria_ard_codebook.md`](metadata/nhanes_albuminuria_ard_codebook.md)  
+([GitHub](https://github.com/YOUR_USERNAME/YOUR_REPO/blob/main/metadata/nhanes_albuminuria_ard_codebook.md)).
+
+**Residual limitations**
+
+The analysis-ready dataset has the following limitations that should be considered when interpreting results:
+
+- Albuminuria was assessed from a single urine sample; persistent albuminuria cannot be confirmed.
+- Diabetes is an operational study phenotype based on self-reported diagnosis, HbA1c and medication use rather than a full clinical diagnosis.
+- Hypertension and obesity remain indeterminate for a small number of participants when source measurements were incomplete.
+- Questionnaire nonresponse and skip patterns may leave uncertainty in phenotype classification.
+- Blood-pressure means may be based on different numbers of readings across participants.
+- Age is top-coded at 80 years in the NHANES public-use file.

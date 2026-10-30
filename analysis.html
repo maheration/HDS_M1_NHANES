@@ -7,7 +7,7 @@
 
         <meta name="author" content="Maher" />
     
-        <meta name="date" content="2026-10-29" />
+        <meta name="date" content="2026-10-30" />
     
     <title>Albuminuria among US adults with metabolic risk factors and preserved kidney filtration</title>
 
@@ -1362,12 +1362,14 @@ risk factors and preserved kidney filtration</a></h2>
       variables</a></li>
       <li><a href="#analysis-ready-dataset" id="toc-analysis-ready-dataset"><span class="toc-section-number">13.5</span> Analysis-ready
       dataset</a></li>
+      <li><a href="#analysis-ready-dataset-validation" id="toc-analysis-ready-dataset-validation"><span class="toc-section-number">13.6</span> Analysis-ready dataset
+      validation</a></li>
       </ul></li>
       </ul>
     </div>
     <div id="postamble" data-toggle="wy-nav-shift" class="status">
                   <p class="author"><span class="glyphicon glyphicon-user"></span> Maher</p>
-                        <p class="date"><span class="glyphicon glyphicon-calendar"></span> 29
+                        <p class="date"><span class="glyphicon glyphicon-calendar"></span> 30
 October 2026</p>
           </div>
    </div>
@@ -3200,6 +3202,89 @@ columns)</caption>
 <p>The final analysis-ready dataset contained 3,370 eligible
 participants and 33 variables, of whom 417 (12.4 %, unweighted) had
 elevated albuminuria.</p>
+</div>
+<div id="analysis-ready-dataset-validation" class="section level3" number="13.6">
+<h3><span class="header-section-number">13.6</span> Analysis-ready
+dataset validation</h3>
+<table>
+<caption>Validation of the exported analysis-ready dataset</caption>
+<thead>
+<tr class="header">
+<th align="left">Check</th>
+<th align="left">Result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Participant identifiers complete and unique</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">All participants aged ≥20 years</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="odd">
+<td align="left">ACR complete, finite and nonnegative</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">Outcome complete and consistent with ACR ≥30 mg/g</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="odd">
+<td align="left">eGFR complete, finite and ≥60 mL/min/1.73 m²</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">All participants have confirmed metabolic risk</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="odd">
+<td align="left">Survey weights finite and positive</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">Survey strata and PSU identifiers complete</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="odd">
+<td align="left">Dataset dimensions match the final export</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">Event count matches the final export</td>
+<td align="left">PASS</td>
+</tr>
+</tbody>
+</table>
+<p>The exported analysis-ready dataset was reloaded and checked for
+complete and unique participant identifiers, age eligibility, valid ACR
+and eGFR values, outcome-threshold consistency, confirmed metabolic-risk
+eligibility, and complete survey-design fields with finite positive
+weights. All checks passed. The dataset contained <strong>3,370</strong>
+participants and <strong>417</strong> elevated-albuminuria events,
+matching the final construction output.</p>
+<p>Variable definitions, derivation rules and missing-value conventions
+are provided in the accompanying metadata file:<br />
+<a href="metadata/nhanes_albuminuria_ard_codebook.md"><code>metadata/nhanes_albuminuria_ard_codebook.md</code></a><br />
+(<a href="https://github.com/YOUR_USERNAME/YOUR_REPO/blob/main/metadata/nhanes_albuminuria_ard_codebook.md">GitHub</a>).</p>
+<p><strong>Residual limitations</strong></p>
+<p>The analysis-ready dataset has the following limitations that should
+be considered when interpreting results:</p>
+<ul>
+<li>Albuminuria was assessed from a single urine sample; persistent
+albuminuria cannot be confirmed.</li>
+<li>Diabetes is an operational study phenotype based on self-reported
+diagnosis, HbA1c and medication use rather than a full clinical
+diagnosis.</li>
+<li>Hypertension and obesity remain indeterminate for a small number of
+participants when source measurements were incomplete.</li>
+<li>Questionnaire nonresponse and skip patterns may leave uncertainty in
+phenotype classification.</li>
+<li>Blood-pressure means may be based on different numbers of readings
+across participants.</li>
+<li>Age is top-coded at 80 years in the NHANES public-use file.</li>
+</ul>
 </div>
 </div>
 </div>
