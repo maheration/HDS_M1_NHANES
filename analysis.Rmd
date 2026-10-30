@@ -1129,7 +1129,7 @@ The exported analysis-ready dataset was reloaded and checked for complete and un
 
 Variable definitions, derivation rules and missing-value conventions are provided in the accompanying metadata file:  
 [`metadata/nhanes_albuminuria_ard_codebook.md`](metadata/nhanes_albuminuria_ard_codebook.md)  
-([GitHub](https://github.com/YOUR_USERNAME/YOUR_REPO/blob/main/metadata/nhanes_albuminuria_ard_codebook.md)).
+([GitHub](https://github.com/maheration/HDS_M1_NHANES/blob/main/metadata/nhanes_albuminuria_ard_codebook.md)).
 
 **Residual limitations**
 
