@@ -1076,6 +1076,10 @@ stopifnot(identical(ard_final, ard_reloaded))
 The final analysis-ready dataset contained 3,370 eligible participants and 33 variables, of whom 417 (12.4 %, unweighted) had elevated albuminuria.
 
 ### Analysis-ready dataset validation
+```{r preserve-survey-source, include=FALSE}
+survey_source <- ard
+```
+
 ```{r ard-validation, echo=FALSE}
 ard <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
 
@@ -1141,3 +1145,179 @@ The analysis-ready dataset has the following limitations that should be consider
 - Questionnaire nonresponse and skip patterns may leave uncertainty in phenotype classification.
 - Blood-pressure means may be based on different numbers of readings across participants.
 - Age is top-coded at 80 years in the NHANES public-use file.
+
+
+## Methods: 
+
+### Statistical analysis
+
+Analyses accounted for the NHANES complex, multistage probability sampling design. The two-year phlebotomy weight (WTPH2YR) was used together with the masked variance strata (SDMVSTRA) and primary sampling units (SDMVPSU), because the study required blood laboratory measures. The eligible study population was analysed as a subpopulation of the phlebotomy-weighted survey sample. Continuous variables were summarised as survey-weighted means and standard deviations; categorical variables were summarised as survey-weighted percentages. Unweighted sample sizes are reported. Descriptive summaries used available observations for each variable. The prevalence of elevated albuminuria was estimated with a logit-transformed 95% confidence interval. Between-group comparisons used design-based *t*-tests for continuous variables and Rao–Scott adjusted Pearson’s χ² tests for categorical variables.
+```{r survey-design}
+library(survey)
+
+# Retain participants with valid phlebotomy weights
+survey_base <- survey_source %>%
+  filter(is.finite(WTPH2YR), WTPH2YR > 0)
+
+stopifnot(
+  !anyNA(survey_base$SDMVSTRA),
+  !anyNA(survey_base$SDMVPSU),
+  !anyNA(survey_base$eligible_study)
+)
+
+# Declare the design before selecting the study population
+design_full <- svydesign(
+  ids     = ~SDMVPSU,
+  strata  = ~SDMVSTRA,
+  weights = ~WTPH2YR,
+  data    = survey_base,
+  nest    = TRUE
+)
+
+# Select eligible participants within the survey design
+design <- subset(design_full, eligible_study)
+
+# Confirm the same participants and ordering as the final ARD
+stopifnot(
+  nrow(design$variables) == 3370,
+  sum(design$variables$elevated_acr) == 417,
+  all(as.numeric(design$variables$SEQN) == as.numeric(ard$SEQN))
+)
+```
+
+
+## Results
+
+### Prevalence of elevated albuminuria
+
+```{r prevalence}
+prev <- svyciprop(~elevated_acr, design, method = "logit", na.rm = TRUE)
+
+prev_table <- data.frame(
+  Prevalence = sprintf("%.1f%%", prev * 100),
+  CI = sprintf("%.1f%% to %.1f%%", 
+               confint(prev)[1] * 100, 
+               confint(prev)[2] * 100)
+)
+
+names(prev_table) <- c("Prevalence", "95% CI")
+
+knitr::kable(prev_table, 
+             caption = "Survey-weighted prevalence of elevated albuminuria (ACR ≥ 30 mg/g)",
+             align = "c")
+```
+### Participant characteristics
+
+Participants with elevated albuminuria were older and had higher mean HbA1c and systolic blood pressure than those without elevated albuminuria (Table 1). The weighted prevalence of diabetes was substantially higher in the elevated albuminuria group (49.8% vs 16.9%, *p* < 0.001), as was hypertension prevalence (83.8% vs 75.0%, *p* = 0.030). Race/ethnicity and smoking distributions also differed between groups. There was little difference in sex distribution or mean BMI.
+
+```{r table1}
+library(gtsummary)
+
+ard$elevated_acr_f <- factor(
+  ard$elevated_acr,
+  levels = c(FALSE, TRUE),
+  labels = c("ACR < 30 mg/g", "ACR ≥ 30 mg/g")
+)
+
+ard$sex_f <- factor(
+  ard$RIAGENDR,
+  levels = c(1, 2),
+  labels = c("Male", "Female")
+)
+
+ard$race_f <- factor(
+  ard$RIDRETH3,
+  levels = c(1, 2, 3, 4, 6, 7),
+  labels = c(
+    "Mexican American", "Other Hispanic",
+    "Non-Hispanic White", "Non-Hispanic Black",
+    "Non-Hispanic Asian", "Other/Multi"
+  )
+)
+
+ard$diabetes_f <- factor(
+  ard$diabetes, levels = c(0, 1), labels = c("No", "Yes")
+)
+
+ard$hypertension_f <- factor(
+  ard$hypertension, levels = c(0, 1), labels = c("No", "Yes")
+)
+
+ard$obesity_f <- factor(
+  ard$obesity, levels = c(0, 1), labels = c("No", "Yes")
+)
+
+design <- update(
+  design,
+  elevated_acr_f = ard$elevated_acr_f,
+  sex_f = ard$sex_f,
+  race_f = ard$race_f,
+  diabetes_f = ard$diabetes_f,
+  hypertension_f = ard$hypertension_f,
+  obesity_f = ard$obesity_f
+)
+
+tbl_svysummary(
+  design,
+  by = elevated_acr_f,
+  include = c(
+    RIDAGEYR, BMXBMI, LBXGH, mean_sbp, egfr,
+    sex_f, race_f, smoking_status,
+    diabetes_f, hypertension_f, obesity_f
+  ),
+  label = list(
+    RIDAGEYR ~ "Age (years)",
+    BMXBMI ~ "BMI (kg/m²)",
+    LBXGH ~ "HbA1c (%)",
+    mean_sbp ~ "Mean systolic BP (mmHg)",
+    egfr ~ "eGFR (mL/min/1.73 m²)",
+    sex_f ~ "Sex",
+    race_f ~ "Race/ethnicity",
+    smoking_status ~ "Smoking status",
+    diabetes_f ~ "Diabetes",
+    hypertension_f ~ "Hypertension",
+    obesity_f ~ "Obesity"
+  ),
+  statistic = list(
+    all_continuous() ~ "{mean} ({sd})",
+    all_categorical() ~ "{p}%"
+  ),
+  digits = list(
+    all_continuous() ~ 1,
+    all_categorical() ~ 1
+  ),
+  missing = "no"
+) %>%
+  add_overall() %>%
+  add_p(
+    test = list(
+      all_continuous() ~ "svy.t.test",
+      all_categorical() ~ "svy.chisq.test"
+    )
+  ) %>%
+  modify_header(
+    label = "**Characteristic**",
+    all_stat_cols() ~ "**{level}**  \nN = {n_unweighted}"
+  ) %>%
+  modify_footnote_header(
+    footnote = paste(
+      "Unweighted sample sizes; survey-weighted means (SD) and percentages.",
+      "For diabetes, hypertension and obesity, percentages represent participants with the condition."
+      
+    ),
+    columns = all_stat_cols(),
+    replace = TRUE
+  ) %>%
+  modify_footnote_header(
+    footnote = paste(
+      "Design-based t-test for continuous variables;",
+      "Rao–Scott adjusted Pearson’s χ² test for categorical variables."
+    ),
+    columns = p.value,
+    replace = TRUE
+  ) %>%
+  bold_labels() %>%
+  modify_caption(
+    "**Table 1.** Participant characteristics by elevated albuminuria status"
+  )
+```
