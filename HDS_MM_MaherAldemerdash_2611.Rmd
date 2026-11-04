@@ -1,0 +1,984 @@
+---
+title: "Albuminuria among US adults with metabolic risk factors and preserved kidney filtration"
+subtitle: "NHANES August 2021–August 2023"
+author: "Maher Aldemerdash"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  rmdformats::readthedown:
+    highlight: tango
+    number_sections: true
+    toc_depth: 3
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+```{r setup-packages, include=FALSE}
+pkgs <- c("haven", "dplyr", "survey", "gtsummary", "broom", "knitr")
+
+for (p in pkgs) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    install.packages(p)
+  }
+  library(p, character.only = TRUE)
+}
+```
+
+```{r packages}
+library(haven)
+library(dplyr)
+library(survey)
+library(gtsummary)
+library(broom)
+library(knitr)
+```
+
+
+```{r download-raw-datasets, include=FALSE}
+dir.create("data/raw", recursive = TRUE, showWarnings = FALSE)
+
+files <- c(
+  "DEMO_L.XPT",
+  "ALB_CR_L.XPT",
+  "BIOPRO_L.XPT",
+  "GHB_L.XPT",
+  "BMX_L.XPT",
+  "BPXO_L.XPT",
+  "DIQ_L.XPT",
+  "BPQ_L.XPT",
+  "SMQ_L.XPT"
+)
+
+base_url <- "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/"
+
+for (f in files) {
+  dest <- file.path("data/raw", f)
+  if (!file.exists(dest)) {
+    download.file(
+      url = paste0(base_url, f),
+      destfile = dest,
+      mode = "wb"
+    )
+    message("Downloaded: ", f)
+  } else {
+    message("Already present: ", f)
+  }
+}
+
+list.files("data/raw")
+```
+
+```{r load-raw-datasets, include=FALSE}
+demo  <- read_xpt("data/raw/DEMO_L.XPT")
+alb   <- read_xpt("data/raw/ALB_CR_L.XPT")
+bio   <- read_xpt("data/raw/BIOPRO_L.XPT")
+ghb   <- read_xpt("data/raw/GHB_L.XPT")
+bmx   <- read_xpt("data/raw/BMX_L.XPT")
+bpxo  <- read_xpt("data/raw/BPXO_L.XPT")
+diq   <- read_xpt("data/raw/DIQ_L.XPT")
+bpq   <- read_xpt("data/raw/BPQ_L.XPT")
+smq   <- read_xpt("data/raw/SMQ_L.XPT")
+
+tibble(
+  file   = c("DEMO_L", "ALB_CR_L", "BIOPRO_L", "GHB_L", "BMX_L",
+             "BPXO_L", "DIQ_L", "BPQ_L", "SMQ_L"),
+  n_rows = c(nrow(demo), nrow(alb), nrow(bio), nrow(ghb), nrow(bmx),
+             nrow(bpxo), nrow(diq), nrow(bpq), nrow(smq)),
+  n_cols = c(ncol(demo), ncol(alb), ncol(bio), ncol(ghb), ncol(bmx),
+             ncol(bpxo), ncol(diq), ncol(bpq), ncol(smq))
+)
+```
+
+
+# Abstract
+
+**Background.** Elevated albuminuria is an early marker of kidney damage and cardiovascular risk. Its prevalence and correlates among adults who already have metabolic risk factors but still have preserved kidney filtration are less well described in recent U.S. population data.
+
+**Methods.** We used the National Health and Nutrition Examination Survey (NHANES) August 2021–August 2023 cycle. Adults aged ≥20 years with estimated glomerular filtration rate (eGFR) ≥60 mL/min/1.73 m² (CKD-EPI 2021) and at least one of diabetes, hypertension or obesity were included. Elevated albuminuria was defined as a urine albumin-to-creatinine ratio ≥30 mg/g. Survey-weighted logistic regression examined associations of age, sex, race/ethnicity, glycated haemoglobin, systolic blood pressure, body-mass index and smoking status with elevated albuminuria. Analyses used the phlebotomy weight and the NHANES complex design.
+
+**Results.** Of 3,370 eligible participants, 3,270 (401 events) had complete data on the modelled covariates. The survey-weighted prevalence of elevated albuminuria was 10.9% (95% CI 10.0–12.0%). After mutual adjustment, higher age (odds ratio 1.33 per 10 years, 95% CI 1.15–1.55), higher HbA1c (1.52 per 1%, 1.33–1.73) and higher systolic blood pressure (1.25 per 10 mmHg, 1.03–1.52) were associated with elevated albuminuria. Current smoking showed a borderline association (1.73, 1.00–3.00). Sex, race/ethnicity, body-mass index and former smoking were not significantly associated.
+
+**Conclusions.** In U.S. adults with metabolic risk factors and preserved eGFR, age, glycaemic control, systolic blood pressure and current smoking were the characteristics most clearly associated with elevated albuminuria.
+
+# Introduction
+Elevated albuminuria, defined as a urine albumin-to-creatinine ratio (ACR) of 30 mg/g or greater, is an early marker of glomerular injury and an independent predictor of progressive chronic kidney disease, cardiovascular events and mortality (1, 2). Because albuminuria can appear before a measurable decline in glomerular filtration rate, it offers a window for risk stratification while kidney function is still preserved (1, 3).
+
+Adults who already carry one or more metabolic risk factors—diabetes, hypertension or obesity—are at elevated risk of both albuminuria and subsequent kidney-function decline (4, 5). At the same time, a substantial proportion of these individuals still have an estimated glomerular filtration rate (eGFR) of 60 mL/min/1.73 m² or higher. In this intermediate-risk group the prevalence of elevated albuminuria and the relative importance of different clinical and metabolic characteristics remain incompletely characterised in contemporary, nationally representative U.S. data.
+
+Previous studies have often examined albuminuria across the full spectrum of kidney function or have focused on single risk factors. Fewer analyses have restricted attention to adults with metabolic risk factors yet preserved filtration and have simultaneously evaluated age, glycaemic control, blood pressure, BMI and smoking within a single survey-weighted model. The most recent complete NHANES cycle (August 2021–August 2023) provides an opportunity to address this gap with up-to-date laboratory and examination measurements and with the current CKD-EPI 2021 equation for eGFR.
+
+The objective of the present study was therefore to determine which clinical and metabolic characteristics are associated with elevated albuminuria (ACR ≥ 30 mg/g) among U.S. adults aged 20 years or older who have at least one metabolic risk factor and preserved eGFR (≥ 60 mL/min/1.73 m²).
+
+# Methods
+
+## Study design and population
+This was a cross-sectional analysis of the National Health and Nutrition Examination Survey (NHANES) August 2021–August 2023 cycle. NHANES is a multistage probability sample of the civilian non-institutionalised U.S. population that combines a household interview with a standardised physical examination and laboratory testing in a mobile examination centre.
+
+Adults aged 20 years or older were eligible if they had a non-missing urine albumin-to-creatinine ratio (ACR), a non-missing serum creatinine, an estimated glomerular filtration rate (eGFR) of at least 60 mL/min/1.73 m² calculated with the race free CKD-EPI 2021 equation, and at least one of the following metabolic risk factors:
+
+- Diabetes, defined as a self-reported physician diagnosis, current use of insulin or oral hypoglycaemic medication, or HbA1c ≥ 6.5 %.
+- Hypertension, defined as a self-reported physician diagnosis, current use of antihypertensive medication, or a mean systolic blood pressure ≥ 130 mmHg or mean diastolic blood pressure ≥ 80 mmHg from the oscillometric examination readings.
+- Obesity, defined as body-mass index ≥ 30 kg/m².
+
+Age ≥ 20 years was selected as the adult threshold, consistent with its use in major NHANES analyses of chronic kidney disease and metabolic risk factors (e.g., USRDS CKD surveillance reports; Wang et al., 2020). Pregnancy was excluded because physiological changes in kidney filtration and albumin excretion during pregnancy can alter the interpretation of both eGFR and ACR; the study objective concerns metabolic risk factors in non-pregnant adults. The primary outcome was elevated albuminuria, defined as ACR ≥ 30 mg/g. Participants were required to have complete data on ACR and serum creatinine so that both the outcome and the eGFR eligibility criterion could be assessed. No other exclusions were applied at the eligibility stage; missing values on covariates used in regression were handled later by complete-case analysis.
+
+All analyses accounted for the NHANES complex survey design. Because the study required blood laboratory measures, the two-year phlebotomy weight (WTPH2YR) was used together with the masked variance strata and primary sampling units.
+
+## Source-data assessment
+Public use component files from the NHANES August 2021–August 2023 cycle were obtained from the CDC repository and read with `haven::read_xpt()`. The files required for the present study were DEMO_L (demographics and survey design variables), ALB_CR_L (urine albumin and creatinine, including the albumin-to-creatinine ratio URDACT), BIOPRO_L (serum creatinine LBXSCR and the phlebotomy weight), GHB_L (HbA1c), BMX_L (body-mass index), BPXO_L (oscillometric blood-pressure readings), DIQ_L (diabetes questionnaire), BPQ_L (blood-pressure questionnaire) and SMQ_L (smoking questionnaire). Each file contains one row per participant and is linkable by the identifier SEQN.
+```{r source-files-structure}
+file_summary <- tibble(
+  file   = c("DEMO_L", "ALB_CR_L", "BIOPRO_L", "GHB_L", "BMX_L",
+             "BPXO_L", "DIQ_L", "BPQ_L", "SMQ_L"),
+  n_rows = c(nrow(demo), nrow(alb), nrow(bio), nrow(ghb), nrow(bmx),
+             nrow(bpxo), nrow(diq), nrow(bpq), nrow(smq)),
+  n_cols = c(ncol(demo), ncol(alb), ncol(bio), ncol(ghb), ncol(bmx),
+             ncol(bpxo), ncol(diq), ncol(bpq), ncol(smq))
+)
+
+knitr::kable(
+  file_summary,
+  col.names = c("File", "Rows", "Columns"),
+  caption = "Dimensions of the NHANES August 2021–August 2023 source files used in this analysis"
+)
+```
+
+Source-level availability and missingness were examined for the variables required to define the outcome, the eGFR eligibility criterion and the metabolic risk factors. Age, sex and race/ethnicity were complete in the demographics file. Laboratory and examination variables showed the expected pattern of component-level missingness: a participant may have a record in a component file yet lack a reported result for a given measurement. Questionnaire items that are asked only of a subset of participants (for example medication use) contain missing values that can arise from planned skip patterns; these were not automatically interpreted as non-response.
+```{r inspect-acr}
+acr_summary <- tibble(
+  `Records in component` = nrow(alb),
+  `ACR available` = sum(!is.na(alb$URDACT)),
+  `ACR missing` = sum(is.na(alb$URDACT)),
+  `Available (%)` = round(100 * mean(!is.na(alb$URDACT)), 1),
+  `Median ACR (mg/g)` = round(median(alb$URDACT, na.rm=TRUE), 2),
+  `ACR >=30 mg/g (n)` = sum(alb$URDACT >= 30, na.rm=TRUE)
+)
+knitr::kable(acr_summary, caption="Urinary ACR availability and distribution within ALB_CR_L")
+```
+```{r inspect-creatinine-hba1c}
+lab_summary <- tibble(
+  Measurement=c("Serum creatinine (mg/dL)", "HbA1c (%)"),
+  `Source records`=c(nrow(bio),nrow(ghb)),
+  `Available (n)`=c(sum(!is.na(bio$LBXSCR)),sum(!is.na(ghb$LBXGH))),
+  `Missing (n)`=c(sum(is.na(bio$LBXSCR)),sum(is.na(ghb$LBXGH))),
+  Median=c(median(bio$LBXSCR,na.rm=TRUE),median(ghb$LBXGH,na.rm=TRUE))
+)
+knitr::kable(lab_summary,digits=2,caption="Availability of blood laboratory measures within their respective source components")
+```
+```{r inspect-bmi}
+bmi_summary <- tibble(
+  `Source records`=nrow(bmx),
+  `BMI available`=sum(!is.na(bmx$BMXBMI)),
+  `BMI missing`=sum(is.na(bmx$BMXBMI)),
+  `Median BMI (kg/m²)`=round(median(bmx$BMXBMI,na.rm=TRUE),1)
+)
+knitr::kable(bmi_summary,caption="BMI availability within BMX_L")
+```
+```{r inspect-bp}
+bp_summary <- tibble(
+  Reading=c("Systolic 1","Systolic 2","Systolic 3",
+            "Diastolic 1","Diastolic 2","Diastolic 3"),
+  `Available (n)`=vapply(bpxo[c("BPXOSY1","BPXOSY2","BPXOSY3",
+                               "BPXODI1","BPXODI2","BPXODI3")],
+                         function(x) sum(!is.na(x)),numeric(1))
+)
+knitr::kable(bp_summary,caption="Availability of repeated oscillometric blood-pressure readings")
+```
+```{r missingness-vars}
+missing_summary <- tibble(
+  Variable = c(
+    "Urine ACR (URDACT)",
+    "Serum creatinine (LBXSCR)",
+    "HbA1c (LBXGH)",
+    "BMI (BMXBMI)",
+    "Systolic BP (BPXOSY1)",
+    "Age (RIDAGEYR)",
+    "Sex (RIAGENDR)",
+    "Race/ethnicity (RIDRETH3)",
+    "Diabetes self-report (DIQ010)",
+    "Insulin use (DIQ050)",
+    "Oral diabetes medication (DIQ070)",
+    "Hypertension self-report (BPQ020)",
+    "Antihypertensive medication (BPQ150)",
+    "Smoking 100+ cigarettes (SMQ020)"
+  ),
+  Source_file = c(
+    "ALB_CR_L", "BIOPRO_L", "GHB_L", "BMX_L", "BPXO_L",
+    "DEMO_L", "DEMO_L", "DEMO_L",
+    "DIQ_L", "DIQ_L", "DIQ_L",
+    "BPQ_L", "BPQ_L", "SMQ_L"
+  ),
+  N_missing = c(
+    sum(is.na(alb$URDACT)),
+    sum(is.na(bio$LBXSCR)),
+    sum(is.na(ghb$LBXGH)),
+    sum(is.na(bmx$BMXBMI)),
+    sum(is.na(bpxo$BPXOSY1)),
+    sum(is.na(demo$RIDAGEYR)),
+    sum(is.na(demo$RIAGENDR)),
+    sum(is.na(demo$RIDRETH3)),
+    sum(is.na(diq$DIQ010)),
+    sum(is.na(diq$DIQ050)),
+    sum(is.na(diq$DIQ070)),
+    sum(is.na(bpq$BPQ020)),
+    sum(is.na(bpq$BPQ150)),
+    sum(is.na(smq$SMQ020))
+  ),
+  N_total = c(
+    nrow(alb), nrow(bio), nrow(ghb), nrow(bmx), nrow(bpxo),
+    nrow(demo), nrow(demo), nrow(demo),
+    nrow(diq), nrow(diq), nrow(diq),
+    nrow(bpq), nrow(bpq), nrow(smq)
+  )
+) %>%
+  mutate(Pct_missing = ifelse(
+  100 * N_missing / N_total < 0.1,
+  round(100 * N_missing / N_total, 2),
+  round(100 * N_missing / N_total, 1)
+))
+
+knitr::kable(
+  missing_summary,
+  col.names = c("Variable", "Source file", "Missing (n)", "Total (n)", "Missing (%)"),
+  caption = "Missingness of key source variables required for the research question"
+)
+```
+
+Observed ranges of key continuous variables (urine ACR, serum creatinine, HbA1c, BMI and systolic blood pressure) were inspected for implausible values. The highest values recorded were large but remained within ranges reported in clinical populations (for example ACR values in the nephrotic range or systolic readings above 200 mmHg). No records were modified or excluded on the basis of these range checks.
+
+```{r range-check}
+range_checks <- tibble(
+  Variable = c("Urine ACR (mg/g)", "Serum creatinine (mg/dL)", "HbA1c (%)",
+               "BMI (kg/m²)", "Systolic BP (mmHg)"),
+  Min = c(
+    min(alb$URDACT, na.rm = TRUE),
+    min(bio$LBXSCR, na.rm = TRUE),
+    min(ghb$LBXGH, na.rm = TRUE),
+    min(bmx$BMXBMI, na.rm = TRUE),
+    min(bpxo$BPXOSY1, na.rm = TRUE)
+  ),
+  Median = c(
+    median(alb$URDACT, na.rm = TRUE),
+    median(bio$LBXSCR, na.rm = TRUE),
+    median(ghb$LBXGH, na.rm = TRUE),
+    median(bmx$BMXBMI, na.rm = TRUE),
+    median(bpxo$BPXOSY1, na.rm = TRUE)
+  ),
+  Max = c(
+    max(alb$URDACT, na.rm = TRUE),
+    max(bio$LBXSCR, na.rm = TRUE),
+    max(ghb$LBXGH, na.rm = TRUE),
+    max(bmx$BMXBMI, na.rm = TRUE),
+    max(bpxo$BPXOSY1, na.rm = TRUE)
+  )
+)
+
+knitr::kable(
+  range_checks,
+  digits = 1,
+  col.names = c("Variable", "Minimum", "Median", "Maximum"),
+  caption = "Observed ranges of key continuous variables"
+)
+```
+
+
+Before any eligibility criteria were applied, record linkage to the demographics file was assessed for each component. 
+```{r linkage-assessment}
+components <- list(
+  DEMO_L=demo, ALB_CR_L=alb, BIOPRO_L=bio, GHB_L=ghb,
+  BMX_L=bmx, BPXO_L=bpxo, DIQ_L=diq, BPQ_L=bpq, SMQ_L=smq
+)
+linkage_summary <- dplyr::bind_rows(lapply(names(components), function(component) {
+  x <- components[[component]]
+  matched <- x$SEQN %in% demo$SEQN
+  adults <- x$SEQN %in% demo$SEQN[!is.na(demo$RIDAGEYR) & demo$RIDAGEYR >= 20]
+  tibble(
+    Component=component,
+    `Source records`=nrow(x),
+    `Unique SEQN`=dplyr::n_distinct(x$SEQN),
+    `N linked to demographics`=sum(matched),
+    `Matched adults (age >=20)`=sum(adults)
+  )
+}))
+knitr::kable(
+  linkage_summary,
+  caption = "Record linkage to demographics and adult coverage by source component. Counts in the linkage column show the number of records whose participant identifier (SEQN) was found in the demographics file."
+)
+```
+Joint availability of urine ACR and serum creatinine was also examined among adults aged ≥ 20 years, because both measurements are required for the outcome and the eGFR criterion. These linkage and joint-availability checks established the maximum number of participants who could potentially enter the study; they did not themselves constitute the participant-flow numbers used for eligibility.
+```{r joint-availability}
+availability <- demo %>%
+  filter(!is.na(RIDAGEYR), RIDAGEYR >= 20) %>%
+  select(SEQN) %>%
+  left_join(alb %>% select(SEQN, URDACT), by="SEQN") %>%
+  left_join(bio %>% select(SEQN, LBXSCR), by="SEQN")
+availability_summary <- tibble(
+  Assessment=c("Adults in demographics",
+               "Adults with ACR measured",
+               "Adults with serum creatinine measured",
+               "Adults with both ACR and serum creatinine measured"),
+  N=c(nrow(availability),
+      sum(!is.na(availability$URDACT)),
+      sum(!is.na(availability$LBXSCR)),
+      sum(!is.na(availability$URDACT) & !is.na(availability$LBXSCR)))
+)
+knitr::kable(availability_summary,
+  caption="Joint availability of the two essential kidney measurements among adults")
+```
+
+## Phenotype definitions and analysis-ready dataset construction
+
+### Data integration and participant linkage
+
+The nine NHANES component files were linked on the unique participant identifier (SEQN). The demographic file (DEMO_L) served as the reference population. Selected variables from the urine albumin–creatinine, biochemistry, glycated haemoglobin, body-measures, blood-pressure examination, diabetes questionnaire, blood-pressure questionnaire and smoking questionnaire files were joined to the demographic file by left join, so that every interviewed participant was retained at this stage. Each source file contained a unique SEQN and the joins preserved both the original number of demographic records and the uniqueness of SEQN.
+
+```{r merge-nhanes-component}
+# Confirm uniqueness of SEQN in each source file before joining
+source_files <- list(
+  DEMO_L = demo, ALB_CR_L = alb, BIOPRO_L = bio, GHB_L = ghb,
+  BMX_L = bmx, BPXO_L = bpxo, DIQ_L = diq, BPQ_L = bpq, SMQ_L = smq
+)
+
+uniqueness_check <- bind_rows(lapply(names(source_files), function(nm) {
+  x <- source_files[[nm]]
+  tibble(
+    File = nm,
+    Rows = nrow(x),
+    Unique_SEQN = n_distinct(x$SEQN),
+    Duplicates = sum(duplicated(x$SEQN))
+  )
+}))
+
+# Merge, retaining only the variables required for subsequent derivation
+ard <- demo %>%
+  select(SEQN, RIDAGEYR, RIAGENDR, RIDRETH3, RIDEXPRG,
+       SDMVSTRA, SDMVPSU, WTINT2YR, WTMEC2YR) %>%
+  left_join(alb  %>% select(SEQN, URDACT), by = "SEQN") %>%
+  left_join(bio  %>% select(SEQN, LBXSCR, WTPH2YR), by = "SEQN") %>%
+  left_join(ghb  %>% select(SEQN, LBXGH), by = "SEQN") %>%
+  left_join(bmx  %>% select(SEQN, BMXBMI), by = "SEQN") %>%
+  left_join(bpxo %>% select(SEQN,
+                            BPXOSY1, BPXOSY2, BPXOSY3,
+                            BPXODI1, BPXODI2, BPXODI3), by = "SEQN") %>%
+  left_join(diq  %>% select(SEQN, DIQ010, DIQ050, DIQ070), by = "SEQN") %>%
+  left_join(bpq  %>% select(SEQN, BPQ020, BPQ030, BPQ150), by = "SEQN") %>%
+  left_join(smq  %>% select(SEQN, SMQ020, SMQ040), by = "SEQN")
+
+merge_check <- tibble(
+  Measure = c("Rows in demographic file",
+              "Rows after joins",
+              "Unique SEQN after joins",
+              "Duplicate SEQN after joins"),
+  Value = c(nrow(demo),
+            nrow(ard),
+            n_distinct(ard$SEQN),
+            sum(duplicated(ard$SEQN)))
+)
+
+knitr::kable(uniqueness_check,
+             caption = "Participant uniqueness within each source file")
+knitr::kable(merge_check,
+             caption = "Row count and participant uniqueness after linkage")
+```
+After linkage the combined dataset contained 11,933 records and 11,933 unique participant identifiers, with no duplicates. The unchanged row count confirmed that no unintended record multiplication occurred. Participant-level linkage integrity was therefore established, while incomplete availability of measurements and questionnaire items across components was retained for later evaluation.
+
+### Kidney function and albuminuria
+
+Estimated glomerular filtration rate was calculated from serum creatinine (LBXSCR, mg/dL), age and sex using the CKD-EPI 2021 creatinine equation, which does not include a race coefficient:
+
+\[
+\text{eGFR} = 142 \times \min(\text{Scr}/\kappa, 1)^{\alpha} \times \max(\text{Scr}/\kappa, 1)^{-1.200} \times 0.9938^{\text{Age}} \times 1.012^{\text{[female]}}
+\]
+
+where Scr is serum creatinine in mg/dL, \(\kappa = 0.7\) (female) or \(0.9\) (male), and \(\alpha = -0.241\) (female) or \(-0.302\) (male). The equation was applied only to participants aged 20 years or older with non-missing serum creatinine and recorded sex; eGFR was set to missing otherwise. Urine albumin-to-creatinine ratio (URDACT, mg/g) was retained as a continuous variable. Elevated albuminuria was defined as ACR ≥ 30 mg/g among participants with a non-missing ACR.
+
+
+```{r derive-egfr}
+ard <- ard %>%
+  mutate(
+    # CKD-EPI 2021 creatinine equation (adults only)
+    kappa = if_else(RIAGENDR == 2, 0.7, 0.9),
+    alpha = if_else(RIAGENDR == 2, -0.241, -0.302),
+    female_factor = if_else(RIAGENDR == 2, 1.012, 1),
+    egfr = if_else(
+      RIDAGEYR >= 20 &
+        !is.na(LBXSCR) & LBXSCR > 0 &
+        RIAGENDR %in% c(1, 2),
+      142 *
+        pmin(LBXSCR / kappa, 1)^alpha *
+        pmax(LBXSCR / kappa, 1)^(-1.200) *
+        0.9938^RIDAGEYR *
+        female_factor,
+      NA_real_
+    ),
+    # Elevated albuminuria
+    elevated_acr = if_else(!is.na(URDACT), URDACT >= 30, NA)
+  )
+
+kidney_check <- ard %>%
+  filter(RIDAGEYR >= 20) %>%
+  summarise(
+    n_adults         = n(),
+    n_with_creatinine = sum(!is.na(LBXSCR)),
+    n_with_egfr      = sum(!is.na(egfr)),
+    egfr_min         = min(egfr, na.rm = TRUE),
+    egfr_median      = median(egfr, na.rm = TRUE),
+    egfr_max         = max(egfr, na.rm = TRUE),
+    n_egfr_lt_60     = sum(egfr < 60, na.rm = TRUE),
+    n_with_acr       = sum(!is.na(URDACT)),
+    n_acr_ge_30      = sum(elevated_acr, na.rm = TRUE)
+  )
+
+knitr::kable(
+  kidney_check,
+  digits = 1,
+  caption = "Kidney function and albuminuria: availability and distribution after derivation"
+)
+```
+Among 7,809 adults aged 20 years or older, serum creatinine was available for 5,443 participants, all of whom had sufficient information for calculation of eGFR. Median eGFR was 93.6 mL/min/1.73 m² (range 3.5–143.4), and 477 participants had eGFR below 60 mL/min/1.73 m². Urine ACR was available for 5,910 adults, of whom 721 (12.2 %) had elevated albuminuria (ACR ≥ 30 mg/g). These figures describe measurement availability and kidney-related characteristics before application of the full study eligibility criteria.
+
+### Mean blood pressure
+
+Blood pressure was assessed using the NHANES oscillometric examination protocol. Following five minutes of seated rest, up to three consecutive systolic and diastolic measurements were obtained approximately 60 seconds apart with an automated upper-arm device. Mean systolic and mean diastolic blood pressure were calculated separately from all available non-missing readings. The large majority of adults with blood-pressure data had all three readings; a small number had only one or two. The first reading was retained whenever it was present. Participants with no available readings for a given measure were assigned a missing mean value.
+```{r derive-bp-measure}
+ard <- ard %>%
+  mutate(
+    mean_sbp = rowMeans(
+      pick(BPXOSY1, BPXOSY2, BPXOSY3),
+      na.rm = TRUE
+    ),
+    mean_dbp = rowMeans(
+      pick(BPXODI1, BPXODI2, BPXODI3),
+      na.rm = TRUE
+    ),
+    mean_sbp = if_else(is.nan(mean_sbp), NA_real_, mean_sbp),
+    mean_dbp = if_else(is.nan(mean_dbp), NA_real_, mean_dbp)
+  )
+
+bp_summary <- ard %>%
+  filter(RIDAGEYR >= 20) %>%
+  summarise(
+    n_adults    = n(),
+    n_with_sbp  = sum(!is.na(mean_sbp)),
+    n_with_dbp  = sum(!is.na(mean_dbp)),
+    sbp_min     = min(mean_sbp, na.rm = TRUE),
+    sbp_median  = median(mean_sbp, na.rm = TRUE),
+    sbp_max     = max(mean_sbp, na.rm = TRUE),
+    dbp_min     = min(mean_dbp, na.rm = TRUE),
+    dbp_median  = median(mean_dbp, na.rm = TRUE),
+    dbp_max     = max(mean_dbp, na.rm = TRUE)
+  )
+
+knitr::kable(
+  bp_summary,
+  digits = 1,
+  caption = "Availability and distribution of mean blood-pressure measurements among adults"
+)
+```
+```{r bp-reading-counts}
+bp_reading_counts <- ard %>%
+  filter(RIDAGEYR >= 20) %>%
+  mutate(
+    n_sbp = rowSums(!is.na(pick(BPXOSY1, BPXOSY2, BPXOSY3))),
+    n_dbp = rowSums(!is.na(pick(BPXODI1, BPXODI2, BPXODI3)))
+  )
+
+# Confirm equal numbers of systolic and diastolic readings
+stopifnot(all(bp_reading_counts$n_sbp == bp_reading_counts$n_dbp))
+
+bp_reading_counts %>%
+  filter(n_sbp > 0) %>%
+  count(Readings = n_sbp, name = "N") %>%
+  arrange(desc(Readings)) %>%
+  mutate(Readings = c("One", "Two", "Three")[Readings]) %>%
+  knitr::kable(
+    caption = paste(
+      "Number of available systolic and diastolic blood-pressure",
+      "readings among adults with a calculated mean"
+    )
+  )
+```
+Among 7,809 adults aged 20 years or older, mean systolic and diastolic blood pressure could be calculated for 5,863 participants (75.1 %). Median systolic blood pressure was 120.3 mmHg (range 70–232.3 mmHg) and median diastolic blood pressure was 74.0 mmHg (range 34–139 mmHg). The observed extremes are uncommon but remain physiologically possible; no values were excluded at this stage. Participants without valid measurements retained missing values rather than being assigned zero. These derived measurements will contribute to the hypertension definition and subsequent analyses. Of the 5,863 adults for whom mean blood pressure was calculated, 5,842 had three systolic and three diastolic measurements, 15 had two of each, and 6 had one of each.
+
+### Diabetes
+
+Diabetes was classified as **present** if any of the following was true:
+
+- self-reported physician diagnosis (DIQ010 = 1), **or**
+- HbA1c ≥ 6.5 %, **or**
+- current insulin use (DIQ050 = 1), **or**
+- current use of diabetes pills (DIQ070 = 1).
+
+Diabetes was classified as **absent** in either of the following situations:
+
+- the participant reported no diagnosis (DIQ010 = 2) **and** HbA1c was measured and below 6.5 %, **or**
+- the participant reported borderline diabetes (DIQ010 = 3), HbA1c was measured and below 6.5 %, **and** neither insulin nor diabetes pills were reported.
+
+When a participant reported no diagnosis, the medication items were not asked; the resulting structural missingness was treated as non-informative. In all other cases diabetes status was left **indeterminate**.
+
+```{r dm-derive}
+ard <- ard %>%
+  mutate(
+    diabetes = case_when(
+  # Present
+  DIQ010 == 1 | LBXGH >= 6.5 | DIQ050 == 1 | DIQ070 == 1 ~ 1,
+
+  # Absent: clear negative self-report + measured HbA1c < 6.5
+  DIQ010 == 2 & !is.na(LBXGH) & LBXGH < 6.5 ~ 0,
+
+  # Absent: borderline self-report, no diabetes medication, measured HbA1c < 6.5
+  DIQ010 == 3 & !is.na(LBXGH) & LBXGH < 6.5 &
+    (is.na(DIQ050) | DIQ050 != 1) &
+    (is.na(DIQ070) | DIQ070 != 1) ~ 0,
+
+  # Indeterminate
+  TRUE ~ NA_real_
+)
+  )
+
+diabetes_summary <- ard %>%
+  filter(RIDAGEYR >= 20) %>%
+  count(diabetes, name = "N") %>%
+  mutate(
+    pct = round(100 * N / sum(N), 1),
+    diabetes = case_when(
+      diabetes == 1 ~ "Present",
+      diabetes == 0 ~ "Absent",
+      TRUE ~ "Indeterminate"
+    )
+  )
+
+knitr::kable(
+  diabetes_summary,
+  caption = "Diabetes phenotype among adults"
+)
+```
+Among 7,809 adults aged 20 years or older, 1,312 (16.8 %) met the diabetes definition, 4,735 (60.6 %) were classified as not having diabetes, and 1,762 (22.6 %) had insufficient information for a definitive classification.
+
+### Hypertension
+
+Hypertension was classified as **present** if any of the following was true:
+
+- self-reported physician diagnosis (BPQ020 = 1), **or**
+- current use of prescribed medication for high blood pressure (BPQ150 = 1), **or**
+- mean systolic blood pressure ≥ 130 mmHg, **or**
+- mean diastolic blood pressure ≥ 80 mmHg.
+
+Hypertension was classified as **absent** only when both of the following held:
+
+- the participant reported no previous diagnosis (BPQ020 = 2), **and**
+- both mean systolic and mean diastolic blood pressure were measured and were below the thresholds above.
+
+When a participant reported no diagnosis, the medication item was not asked; the resulting structural missingness was treated as non-informative. In all other cases hypertension status was left **indeterminate**.
+The blood-pressure thresholds follow the 2017 ACC/AHA guideline definition of hypertension (≥130/80 mmHg).
+
+
+```{r htn-derive}
+
+ard <- ard %>%
+  mutate(
+    hypertension = case_when(
+      BPQ020 == 1 |
+        BPQ150 == 1 |
+        mean_sbp >= 130 |
+        mean_dbp >= 80 ~ 1,
+
+      BPQ020 == 2 &
+        !is.na(mean_sbp) &
+        !is.na(mean_dbp) &
+        mean_sbp < 130 &
+        mean_dbp < 80 ~ 0,
+
+      TRUE ~ NA_real_
+    )
+  )
+
+hypertension_summary <- ard %>%
+  filter(RIDAGEYR >= 20) %>%
+  count(hypertension, name = "N") %>%
+  mutate(
+    pct = round(100 * N / sum(N), 1),
+    hypertension = case_when(
+      hypertension == 1 ~ "Present",
+      hypertension == 0 ~ "Absent",
+      TRUE ~ "Indeterminate"
+    )
+  )
+
+knitr::kable(
+  hypertension_summary,
+  caption = "Hypertension phenotype among adults"
+)
+
+```
+Among 7,809 adults aged 20 years or older, 4085 (52.3 %) met at least one criterion for hypertension and 2 489 (31.9 %) were classified as not having hypertension. Hypertension status remained indeterminate for 1235 participants (15.8 %) because the available information was insufficient to establish either presence or absence. These classifications were derived before application of the full study eligibility criteria.
+
+### Obesity
+
+Obesity was classified as **present** if body mass index (BMI) was ≥ 30 kg/m² (BMXBMI).  
+
+Obesity was classified as **absent** if BMI was measured and was below 30 kg/m².  
+
+Participants without a valid BMI measurement were classified as **indeterminate**. BMI was also retained as a continuous variable for later analysis.
+
+
+```{r obesity-derive}
+ard <- ard %>%
+  mutate(
+    obesity = case_when(
+      !is.na(BMXBMI) & BMXBMI >= 30 ~ 1,
+      !is.na(BMXBMI) & BMXBMI < 30 ~ 0,
+      TRUE ~ NA_real_
+    )
+  )
+
+obesity_summary <- ard %>%
+  filter(RIDAGEYR >= 20) %>%
+  count(obesity, name = "N") %>%
+  mutate(
+    pct = round(100 * N / sum(N), 1),
+    obesity = case_when(
+      obesity == 1 ~ "Present",
+      obesity == 0 ~ "Absent",
+      TRUE ~ "Indeterminate"
+    )
+  )
+
+knitr::kable(
+  obesity_summary,
+  caption = "Obesity phenotype among adults"
+)
+```
+Among 7,809 adults aged 20 years or older, 2,455 (31.4 %) met the BMI criterion for obesity and 3,515 (45.0 %) had BMI below 30 kg/m². Obesity status was indeterminate for 1,839 participants (23.5 %). These classifications were derived before application of the full study eligibility criteria.
+
+### Combined metabolic risk
+
+The three phenotypes (DM, HTN, Obesity) were combined into a single indicator variable (`metabolic_risk`). A participant was classified as having metabolic risk if at least one phenotype was present. The indicator was absent only when all three phenotypes were absent, and indeterminate otherwise.
+
+
+```{r metabolic-risk-derive}
+ard <- ard %>%
+  mutate(
+    metabolic_risk = case_when(
+      diabetes == 1 | hypertension == 1 | obesity == 1 ~ 1,
+      diabetes == 0 & hypertension == 0 & obesity == 0 ~ 0,
+      TRUE ~ NA_real_
+    )
+  )
+
+metabolic_risk_summary <- ard %>%
+  filter(RIDAGEYR >= 20) %>%
+  count(metabolic_risk, name = "N") %>%
+  mutate(
+    pct = round(100 * N / sum(N), 1),
+    metabolic_risk = case_when(
+      metabolic_risk == 1 ~ "Present",
+      metabolic_risk == 0 ~ "Absent",
+      TRUE ~ "Indeterminate"
+    )
+  )
+
+knitr::kable(
+  metabolic_risk_summary,
+  caption = "Combined metabolic-risk classification among adults"
+)
+stopifnot(
+  all(
+    (ard$metabolic_risk == 1) ==
+      (ard$diabetes == 1 | ard$hypertension == 1 | ard$obesity == 1),
+    na.rm = TRUE
+  )
+)
+```
+Among 7,809 adults aged 20 years or older, 5,021 (64.3 %) were classified as having metabolic risk (at least one of the three phenotypes present). All three phenotypes were classified as absent in 1,576 participants (20.2 %), while metabolic-risk status remained indeterminate for 1,212 (15.5 %). These results describe metabolic-risk classification before application of the kidney-function and albuminuria eligibility criteria.
+
+### Demographic, laboratory and smoking variables
+
+Age (years), sex and race/ethnicity were taken from the demographic file and retained in their original NHANES coding. Glycated haemoglobin (HbA1c, %), body mass index (BMI, kg/m²) and derived mean systolic blood pressure (mmHg) were retained as continuous covariates.
+
+### Smoking status
+
+Smoking status was classified from self-reported lifetime and current cigarette use:
+
+- **Never** — smoked fewer than 100 cigarettes in lifetime (SMQ020 = 2).  
+- **Former** — smoked at least 100 cigarettes (SMQ020 = 1) and now smokes not at all (SMQ040 = 3).  
+- **Current** — smoked at least 100 cigarettes (SMQ020 = 1) and now smokes every day or some days (SMQ040 = 1 or 2).  
+
+Participants with insufficient information were left unclassified (missing).
+
+
+```{r smoking-derive}
+ard <- ard %>%
+  mutate(
+    smoking_status = case_when(
+      SMQ020 == 2 ~ "Never",
+      SMQ020 == 1 & SMQ040 == 3 ~ "Former",
+      SMQ020 == 1 & SMQ040 %in% c(1, 2) ~ "Current",
+      TRUE ~ NA_character_
+    ),
+    smoking_status = factor(
+      smoking_status,
+      levels = c("Never", "Former", "Current")
+    )
+  )
+
+smoking_summary <- ard %>%
+  filter(RIDAGEYR >= 20) %>%
+  count(smoking_status, name = "N", .drop = FALSE) %>%
+  mutate(
+    pct = round(100 * N / sum(N), 1)
+  )
+
+knitr::kable(
+  smoking_summary,
+  caption = "Smoking status among adults"
+)
+```
+Among 7,809 adults aged 20 years or older, 4,547 (58.2%) were classified as never smokers, 2,050 (26.3%) as former smokers and 1,183 (15.1%) as current smokers. Smoking status could not be determined for 29 participants (0.4%) because the available questionnaire responses were insufficient for classification. These figures describe the adult source population before application of the study eligibility criteria.
+
+### Eligibility criteria and creation of the analysis-ready dataset
+Eligibility criteria were applied sequentially, and the number of participants remaining at each step was recorded to document cohort selection.
+
+```{r eligibility-flag}
+ard <- ard %>%
+  mutate(
+    eligible_age = !is.na(RIDAGEYR) & RIDAGEYR >= 20,
+    eligible_not_pregnant = is.na(RIDEXPRG) | RIDEXPRG != 1,
+    eligible_kidney_measurements = !is.na(URDACT) & !is.na(LBXSCR) & !is.na(egfr),
+    eligible_egfr = !is.na(egfr) & egfr >= 60,
+    eligible_metabolic_risk = !is.na(metabolic_risk) & metabolic_risk == 1,
+    eligible_study = eligible_age &
+                     eligible_not_pregnant &
+                     eligible_kidney_measurements &
+                     eligible_egfr &
+                     eligible_metabolic_risk
+  )
+
+flow <- tibble(
+  Step = c(
+    "Demographic file",
+    "Adults aged ≥ 20 years",
+    "Not pregnant",
+    "Valid ACR and serum creatinine",
+    "eGFR ≥ 60 mL/min/1.73 m²",
+    "≥ 1 metabolic risk factor (final eligible population)"
+  ),
+  N = c(
+    nrow(demo),
+    sum(ard$eligible_age, na.rm = TRUE),
+    sum(ard$eligible_age & ard$eligible_not_pregnant, na.rm = TRUE),
+    sum(ard$eligible_age & ard$eligible_not_pregnant & ard$eligible_kidney_measurements, na.rm = TRUE),
+    sum(ard$eligible_age & ard$eligible_not_pregnant & ard$eligible_kidney_measurements & ard$eligible_egfr, na.rm = TRUE),
+    sum(ard$eligible_study, na.rm = TRUE)
+  )
+)
+
+stopifnot(
+  all(diff(flow$N) <= 0),
+  tail(flow$N, 1) == sum(ard$eligible_study),
+  !anyNA(ard$eligible_study)
+)
+
+knitr::kable(
+  flow,
+  caption = "Participant selection flow"
+)
+```
+Of the 11,933 participants in the demographic file, 7,809 were aged 20 years or older and 7,768 were not pregnant. Following sequential application of the kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3,370 participants remained in the eligible study population.
+
+```{r eligibility-event-summary}
+stopifnot(
+  !anyNA(ard$elevated_acr[ard$eligible_study])
+)
+ard %>%
+  filter(eligible_study) %>%
+  summarise(
+    `Eligible participants` = n(),
+    `Elevated albuminuria (ACR ≥ 30)` = sum(elevated_acr, na.rm = TRUE)
+  ) %>%
+  knitr::kable(caption = "Eligible population and primary outcome events")
+```
+### Missing data
+
+Missingness was assessed among the 3,370 participants who met the study eligibility criteria. The number and percentage of missing values were calculated for the primary outcome and the candidate regression covariates (age, sex, race/ethnicity, HbA1c, mean systolic blood pressure, BMI and smoking status).
+
+Participants were not excluded from the analysis-ready dataset solely because of missing regression covariates. The extent of missingness was documented to inform the subsequent analytical approach.
+
+```{r missingness-summary}
+eligible <- ard %>%
+  filter(eligible_study)
+
+missingness <- tibble(
+  Variable = c(
+    "Elevated albuminuria",
+    "Age",
+    "Sex",
+    "Race/ethnicity",
+    "HbA1c",
+    "Mean systolic blood pressure",
+    "BMI",
+    "Smoking status"
+  ),
+  Missing_N = c(
+    sum(is.na(eligible$elevated_acr)),
+    sum(is.na(eligible$RIDAGEYR)),
+    sum(is.na(eligible$RIAGENDR)),
+    sum(is.na(eligible$RIDRETH3)),
+    sum(is.na(eligible$LBXGH)),
+    sum(is.na(eligible$mean_sbp)),
+    sum(is.na(eligible$BMXBMI)),
+    sum(is.na(eligible$smoking_status))
+  ),
+  Total_N = nrow(eligible)
+) %>%
+  mutate(Missing_pct = round(100 * Missing_N / Total_N, 1))
+
+knitr::kable(
+  missingness,
+  caption = "Missing data among eligible participants"
+)
+```
+Among the 3,370 eligible participants, the primary outcome, age, sex, race/ethnicity and HbA1c were complete. Missingness was highest for mean systolic blood pressure (75 participants; 2.2 %), followed by BMI (23; 0.7 %) and smoking status (6; 0.2 %). All eligible participants were retained in the analysis-ready dataset regardless of covariate completeness.
+
+### Survey design variables
+
+The survey sampling weight (WTPH2YR), masked variance stratum (SDMVSTRA) and primary sampling unit (SDMVPSU) were retained in the analysis-ready dataset. Completeness of these variables was verified among eligible participants.
+
+
+```{r survey-design-check}
+survey_vars <- c("WTPH2YR", "SDMVSTRA", "SDMVPSU")
+
+survey_check <- tibble(
+  Variable = survey_vars,
+  Present_in_ARD = survey_vars %in% names(ard)
+)
+
+knitr::kable(
+  survey_check,
+  caption = "Availability of NHANES survey design variables"
+)
+
+if (all(survey_check$Present_in_ARD)) {
+  eligible %>%
+    summarise(
+      Eligible_N = n(),
+      Missing_weight = sum(is.na(WTPH2YR)),
+      Nonpositive_weight = sum(!is.na(WTPH2YR) & WTPH2YR <= 0),
+      Missing_stratum = sum(is.na(SDMVSTRA)),
+      Missing_PSU = sum(is.na(SDMVPSU))
+    ) %>%
+    knitr::kable(
+      caption = "Survey design variable completeness among eligible participants"
+    )
+}
+```
+No missing or non-positive values were identified among the 3,370 eligible participants.
+
+### Analysis-ready dataset
+
+The analysis-ready dataset was constructed by retaining the 3,370 participants who met all study eligibility criteria. It contains:
+
+- the participant identifier and demographic characteristics,  
+- the primary albuminuria outcome and candidate regression variables,  
+- derived clinical and metabolic-risk indicators,  
+- the original measurements and questionnaire responses used to construct those indicators, and  
+- the NHANES survey design variables.
+
+Participants were not excluded solely because of missing regression covariates. The dataset was checked for participant-level uniqueness, eligibility consistency, outcome completeness and availability of survey design variables, then saved in RDS format for subsequent analyses.
+
+```{r analysis-ready-dataset}
+ard_columns <- c(
+  "SEQN", "RIDAGEYR", "RIAGENDR", "RIDRETH3",
+  "URDACT", "elevated_acr", "LBXSCR", "egfr", "LBXGH",
+  "BPXOSY1", "BPXOSY2", "BPXOSY3",
+  "BPXODI1", "BPXODI2", "BPXODI3",
+  "mean_sbp", "mean_dbp", "BMXBMI",
+  "DIQ010", "DIQ050", "DIQ070",
+  "BPQ020", "BPQ150",
+  "SMQ020", "SMQ040", "smoking_status",
+  "diabetes", "hypertension", "obesity", "metabolic_risk",
+  "WTPH2YR", "SDMVSTRA", "SDMVPSU"
+)
+
+missing_columns <- setdiff(ard_columns, names(ard))
+if (length(missing_columns) > 0) {
+  stop("Required columns missing from ard: ",
+       paste(missing_columns, collapse = ", "))
+}
+
+ard_final <- ard %>%
+  filter(eligible_study) %>%
+  select(all_of(ard_columns))
+
+stopifnot(
+  nrow(ard_final) == 3370,
+  !anyNA(ard_final$SEQN),
+  !anyDuplicated(ard_final$SEQN),
+  all(ard_final$RIDAGEYR >= 20),
+  all(!is.na(ard_final$URDACT)),
+  all(!is.na(ard_final$LBXSCR)),
+  all(!is.na(ard_final$egfr) & ard_final$egfr >= 60),
+  all(ard_final$metabolic_risk == 1),
+  !anyNA(ard_final$elevated_acr),
+  all(ard_final$elevated_acr == (ard_final$URDACT >= 30)),
+  all(!is.na(ard_final$WTPH2YR) & ard_final$WTPH2YR > 0),
+  !anyNA(ard_final$SDMVSTRA),
+  !anyNA(ard_final$SDMVPSU)
+)
+
+tibble(
+  Participants = nrow(ard_final),
+  Variables = ncol(ard_final),
+  Unique_participants = n_distinct(ard_final$SEQN),
+  Elevated_albuminuria = sum(ard_final$elevated_acr)
+) %>%
+  knitr::kable(caption = "Final analysis-ready dataset summary")
+```
+```{r preview-ard, echo=FALSE, results='asis'}
+preview_table <- knitr::kable(
+  head(ard_final, 5),
+  format = "html",
+  caption = "Preview of the analysis-ready dataset (first 5 rows, all columns)",
+  row.names = FALSE,
+  table.attr = 'style="width: max-content; margin: 0;"'
+)
+
+cat(
+  '<div style="width: 100%; overflow-x: auto;">',
+  as.character(preview_table),
+  '</div>'
+)
+```
+```{r export-ards}
+dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
+
+saveRDS(ard_final, file = "data/processed/nhanes_albuminuria_ard.rds")
+
+ard_reloaded <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
+stopifnot(identical(ard_final, ard_reloaded))
+```
+
+
+## Validation
+
+## Statistical analysis
+
+# Results
+
+## Participant flow and characteristics
+
+## Prevalence of elevated albuminuria
+
+## Associations with elevated albuminuria
+
+# Discussion
+
+# References
