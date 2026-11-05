@@ -7,7 +7,7 @@
 
         <meta name="author" content="Maher Aldemerdash" />
     
-        <meta name="date" content="2026-11-04" />
+        <meta name="date" content="2026-11-05" />
     
     <title>Albuminuria among US adults with metabolic risk factors and preserved kidney filtration</title>
 
@@ -1381,7 +1381,7 @@ risk factors and preserved kidney filtration</a></h2>
     <div id="postamble" data-toggle="wy-nav-shift" class="status">
                   <p class="author"><span class="glyphicon glyphicon-user"></span> Maher
 Aldemerdash</p>
-                        <p class="date"><span class="glyphicon glyphicon-calendar"></span> 04
+                        <p class="date"><span class="glyphicon glyphicon-calendar"></span> 05
 November 2026</p>
           </div>
    </div>
@@ -2266,10 +2266,9 @@ mmHg) and median diastolic blood pressure was 74.0 mmHg (range 34–139
 mmHg). The observed extremes are uncommon but remain physiologically
 possible; no values were excluded at this stage. Participants without
 valid measurements retained missing values rather than being assigned
-zero. These derived measurements will contribute to the hypertension
-definition and subsequent analyses. Of the 5,863 adults for whom mean
-blood pressure was calculated, 5,842 had three systolic and three
-diastolic measurements, 15 had two of each, and 6 had one of each.</p>
+zero. Of the 5,863 adults for whom mean blood pressure was calculated,
+5,842 had three systolic and three diastolic measurements, 15 had two of
+each, and 6 had one of each.</p>
 </div>
 <div id="diabetes" class="section level3" number="3.3.4">
 <h3><span class="header-section-number">3.3.4</span> Diabetes</h3>
@@ -2560,7 +2559,7 @@ selection.</p>
 <td align="right">7809</td>
 </tr>
 <tr class="odd">
-<td align="left">Not pregnant</td>
+<td align="left">After exclusion of pregnants</td>
 <td align="right">7768</td>
 </tr>
 <tr class="even">
@@ -2579,10 +2578,10 @@ population)</td>
 </tbody>
 </table>
 <p>Of the 11,933 participants in the demographic file, 7,809 were aged
-20 years or older and 7,768 were not pregnant. Following sequential
-application of the kidney-measurement, eGFR and metabolic-risk
-eligibility criteria, 3,370 participants remained in the eligible study
-population.</p>
+20 years or older; 7,768 remained after excluding participants
+identified as pregnant. Following sequential application of the
+kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3,370
+participants remained in the eligible study population.</p>
 <table>
 <caption>Eligible population and primary outcome events</caption>
 <thead>
@@ -2757,10 +2756,9 @@ construct those indicators, and<br />
 </li>
 <li>the NHANES survey design variables.</li>
 </ul>
-<p>Participants were not excluded solely because of missing regression
-covariates. The dataset was checked for participant-level uniqueness,
-eligibility consistency, outcome completeness and availability of survey
-design variables, then saved in RDS format for subsequent analyses.</p>
+<p>The dataset was checked for participant-level uniqueness, eligibility
+consistency, outcome completeness and availability of survey design
+variables, then saved in RDS format for subsequent analyses.</p>
 <table>
 <caption>Final analysis-ready dataset summary</caption>
 <thead>
@@ -3401,10 +3399,100 @@ Never
 </div>
 <div id="validation" class="section level2" number="3.4">
 <h2><span class="header-section-number">3.4</span> Validation</h2>
+<table>
+<caption>Validation of the exported analysis-ready dataset</caption>
+<thead>
+<tr class="header">
+<th align="left">Check</th>
+<th align="left">Result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Participant identifiers complete and unique</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">All participants aged ≥20 years</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="odd">
+<td align="left">ACR complete, finite and nonnegative</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">Outcome complete and consistent with ACR ≥30 mg/g</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="odd">
+<td align="left">eGFR complete, finite and ≥60 mL/min/1.73 m²</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">All participants have confirmed metabolic risk</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="odd">
+<td align="left">Survey weights finite and positive</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">Survey strata and PSU identifiers complete</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="odd">
+<td align="left">Dataset dimensions match the final export</td>
+<td align="left">PASS</td>
+</tr>
+<tr class="even">
+<td align="left">Event count matches the final export</td>
+<td align="left">PASS</td>
+</tr>
+</tbody>
+</table>
+<p>The exported analysis-ready dataset was reloaded and checked for
+complete and unique participant identifiers, age eligibility, valid ACR
+and eGFR values, outcome-threshold consistency, confirmed metabolic-risk
+eligibility, and complete survey-design fields with finite positive
+weights. All checks passed. The dataset contained <strong>3,370</strong>
+participants and <strong>417</strong> elevated-albuminuria events,
+matching the final construction output.</p>
+<p>Variable definitions, derivation rules and missing-value conventions
+are provided in the accompanying metadata file:<br />
+<a href="metadata/nhanes_albuminuria_ard_codebook.md"><code>metadata/nhanes_albuminuria_ard_codebook.md</code></a><br />
+(<a href="https://github.com/maheration/HDS_M1_NHANES/blob/main/metadata/nhanes_albuminuria_ard_codebook.md">GitHub</a>).</p>
 </div>
 <div id="statistical-analysis" class="section level2" number="3.5">
 <h2><span class="header-section-number">3.5</span> Statistical
 analysis</h2>
+<p>Analyses accounted for the NHANES complex, multistage probability
+sampling design. The two-year phlebotomy weight (WTPH2YR) was used with
+the masked variance strata (SDMVSTRA) and primary sampling units
+(SDMVPSU), because the study required blood laboratory measurements. The
+survey design was declared in the broader sample with finite, positive
+phlebotomy weights, with primary sampling units nested within strata.
+The eligible study population was then selected as a survey
+subpopulation.</p>
+<p>Continuous variables were summarised as survey-weighted means and
+standard deviations, and categorical variables as survey-weighted
+percentages. Unweighted sample sizes were reported. Descriptive
+summaries used available observations for each variable. The prevalence
+of elevated albuminuria was estimated with a logit-transformed 95%
+confidence interval. Comparisons between participants with and without
+elevated albuminuria used design-based t-tests for continuous variables
+and Rao–Scott adjusted Pearson’s χ² tests for categorical variables.</p>
+<p>Survey-weighted binary logistic regression was fitted using
+survey::svyglm() with a quasibinomial family. The prespecified model
+included age (per 10 years), sex, race/ethnicity, HbA1c (per percentage
+point), mean systolic blood pressure (per 10 mmHg), BMI (per 5 kg/m²)
+and smoking status. Reference categories were male, non-Hispanic White
+and never smoker. Regression was restricted to participants with
+complete data on all seven predictors, selected within the survey
+design. Adjusted odds ratios and 95% confidence intervals were obtained
+by exponentiating model coefficients and their confidence limits. Model
+checks comprised the number of outcome events per estimated predictor
+parameter and exploratory tests adding a quadratic term separately for
+each continuous predictor.</p>
 </div>
 </div>
 <div id="results" class="section level1" number="4">

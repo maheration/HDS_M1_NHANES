@@ -506,7 +506,7 @@ bp_reading_counts %>%
     )
   )
 ```
-Among 7,809 adults aged 20 years or older, mean systolic and diastolic blood pressure could be calculated for 5,863 participants (75.1 %). Median systolic blood pressure was 120.3 mmHg (range 70–232.3 mmHg) and median diastolic blood pressure was 74.0 mmHg (range 34–139 mmHg). The observed extremes are uncommon but remain physiologically possible; no values were excluded at this stage. Participants without valid measurements retained missing values rather than being assigned zero. These derived measurements will contribute to the hypertension definition and subsequent analyses. Of the 5,863 adults for whom mean blood pressure was calculated, 5,842 had three systolic and three diastolic measurements, 15 had two of each, and 6 had one of each.
+Among 7,809 adults aged 20 years or older, mean systolic and diastolic blood pressure could be calculated for 5,863 participants (75.1 %). Median systolic blood pressure was 120.3 mmHg (range 70–232.3 mmHg) and median diastolic blood pressure was 74.0 mmHg (range 34–139 mmHg). The observed extremes are uncommon but remain physiologically possible; no values were excluded at this stage. Participants without valid measurements retained missing values rather than being assigned zero. Of the 5,863 adults for whom mean blood pressure was calculated, 5,842 had three systolic and three diastolic measurements, 15 had two of each, and 6 had one of each.
 
 ### Diabetes
 
@@ -766,7 +766,7 @@ flow <- tibble(
   Step = c(
     "Demographic file",
     "Adults aged ≥ 20 years",
-    "Not pregnant",
+    "After exclusion of pregnants",
     "Valid ACR and serum creatinine",
     "eGFR ≥ 60 mL/min/1.73 m²",
     "≥ 1 metabolic risk factor (final eligible population)"
@@ -792,7 +792,7 @@ knitr::kable(
   caption = "Participant selection flow"
 )
 ```
-Of the 11,933 participants in the demographic file, 7,809 were aged 20 years or older and 7,768 were not pregnant. Following sequential application of the kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3,370 participants remained in the eligible study population.
+Of the 11,933 participants in the demographic file, 7,809 were aged 20 years or older; 7,768 remained after excluding participants identified as pregnant. Following sequential application of the kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3,370 participants remained in the eligible study population.
 
 ```{r eligibility-event-summary}
 stopifnot(
@@ -892,7 +892,7 @@ The analysis-ready dataset was constructed by retaining the 3,370 participants w
 - the original measurements and questionnaire responses used to construct those indicators, and  
 - the NHANES survey design variables.
 
-Participants were not excluded solely because of missing regression covariates. The dataset was checked for participant-level uniqueness, eligibility consistency, outcome completeness and availability of survey design variables, then saved in RDS format for subsequent analyses.
+The dataset was checked for participant-level uniqueness, eligibility consistency, outcome completeness and availability of survey design variables, then saved in RDS format for subsequent analyses.
 
 ```{r analysis-ready-dataset}
 ard_columns <- c(
@@ -968,8 +968,107 @@ stopifnot(identical(ard_final, ard_reloaded))
 
 
 ## Validation
+```{r preserve-survey-source, include=FALSE}
+survey_source <- ard
+```
+
+```{r ard-validation, echo=FALSE}
+ard_reloaded <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
+
+checks <- tibble::tibble(
+  Check = c(
+    "Participant identifiers complete and unique",
+    "All participants aged ≥20 years",
+    "ACR complete, finite and nonnegative",
+    "Outcome complete and consistent with ACR ≥30 mg/g",
+    "eGFR complete, finite and ≥60 mL/min/1.73 m²",
+    "All participants have confirmed metabolic risk",
+    "Survey weights finite and positive",
+    "Survey strata and PSU identifiers complete",
+    "Dataset dimensions match the final export",
+    "Event count matches the final export"
+  ),
+  Passed = c(
+    !anyNA(ard_reloaded$SEQN) && !anyDuplicated(ard_reloaded$SEQN),
+    all(is.finite(ard_reloaded$RIDAGEYR) & ard_reloaded$RIDAGEYR >= 20),
+    all(is.finite(ard_reloaded$URDACT) & ard_reloaded$URDACT >= 0),
+    !anyNA(ard_reloaded$elevated_acr) &&
+      all(ard_reloaded$elevated_acr == (ard_reloaded$URDACT >= 30)),
+    all(is.finite(ard_reloaded$egfr) & ard_reloaded$egfr >= 60),
+    !anyNA(ard_reloaded$metabolic_risk) &&
+      all(ard_reloaded$metabolic_risk == 1),
+    all(is.finite(ard_reloaded$WTPH2YR) & ard_reloaded$WTPH2YR > 0),
+    !anyNA(ard_reloaded[c("SDMVSTRA", "SDMVPSU")]),
+    nrow(ard_reloaded) == 3370 && ncol(ard_reloaded) == 33,
+    !anyNA(ard_reloaded$elevated_acr) &&
+      sum(ard_reloaded$elevated_acr) == 417
+  )
+)
+
+if (!all(checks$Passed)) {
+  stop(
+    "ARD validation failed: ",
+    paste(checks$Check[which(is.na(checks$Passed) |
+                               !checks$Passed)], collapse = "; ")
+  )
+}
+
+checks$Result <- ifelse(checks$Passed, "PASS", "FAIL")
+
+knitr::kable(
+  checks[c("Check", "Result")],
+  caption = "Validation of the exported analysis-ready dataset"
+)
+```
+The exported analysis-ready dataset was reloaded and checked for complete and unique participant identifiers, age eligibility, valid ACR and eGFR values, outcome-threshold consistency, confirmed metabolic-risk eligibility, and complete survey-design fields with finite positive weights. All checks passed. The dataset contained **3,370** participants and **417** elevated-albuminuria events, matching the final construction output.
+
+Variable definitions, derivation rules and missing-value conventions are provided in the accompanying metadata file:  
+[`metadata/nhanes_albuminuria_ard_codebook.md`](metadata/nhanes_albuminuria_ard_codebook.md)  
+([GitHub](https://github.com/maheration/HDS_M1_NHANES/blob/main/metadata/nhanes_albuminuria_ard_codebook.md)).
 
 ## Statistical analysis
+Analyses accounted for the NHANES complex, multistage probability sampling design. The two-year phlebotomy weight (WTPH2YR) was used with the masked variance strata (SDMVSTRA) and primary sampling units (SDMVPSU), because the study required blood laboratory measurements. The survey design was declared in the broader sample with finite, positive phlebotomy weights, with primary sampling units nested within strata. The eligible study population was then selected as a survey subpopulation.
+
+Continuous variables were summarised as survey-weighted means and standard deviations, and categorical variables as survey-weighted percentages. Unweighted sample sizes were reported. Descriptive summaries used available observations for each variable. The prevalence of elevated albuminuria was estimated with a logit-transformed 95% confidence interval. Comparisons between participants with and without elevated albuminuria used design-based t-tests for continuous variables and Rao–Scott adjusted Pearson’s χ² tests for categorical variables.
+
+Survey-weighted binary logistic regression was fitted using survey::svyglm() with a quasibinomial family. The prespecified model included age (per 10 years), sex, race/ethnicity, HbA1c (per percentage point), mean systolic blood pressure (per 10 mmHg), BMI (per 5 kg/m²) and smoking status. Reference categories were male, non-Hispanic White and never smoker. Regression was restricted to participants with complete data on all seven predictors, selected within the survey design. Adjusted odds ratios and 95% confidence intervals were obtained by exponentiating model coefficients and their confidence limits. Model checks comprised the number of outcome events per estimated predictor parameter and exploratory tests adding a quadratic term separately for each continuous predictor.
+
+```{r survey-design}
+library(survey)
+
+# Retain participants with valid phlebotomy weights
+survey_base <- survey_source %>%
+  filter(is.finite(WTPH2YR), WTPH2YR > 0)
+
+stopifnot(
+  !anyNA(survey_base$SDMVSTRA),
+  !anyNA(survey_base$SDMVPSU),
+  !anyNA(survey_base$eligible_study)
+)
+
+# Declare the design before selecting the study population
+design_full <- svydesign(
+  ids     = ~SDMVPSU,
+  strata  = ~SDMVSTRA,
+  weights = ~WTPH2YR,
+  data    = survey_base,
+  nest    = TRUE
+)
+
+# Select eligible participants within the survey design
+design <- subset(design_full, eligible_study)
+
+# Confirm the same participants and ordering as the final ARD
+stopifnot(
+  nrow(design$variables) == 3370,
+  sum(design$variables$elevated_acr) == 417,
+  identical(
+  as.numeric(design$variables$SEQN),
+  as.numeric(ard_reloaded$SEQN)
+)
+)
+```
+
 
 # Results
 
