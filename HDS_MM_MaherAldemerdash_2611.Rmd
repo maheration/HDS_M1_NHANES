@@ -1072,11 +1072,291 @@ stopifnot(
 
 # Results
 
-## Participant flow and characteristics
+## Participant characteristics
+Participants with elevated albuminuria were older and had higher mean HbA1c and systolic blood pressure than those without elevated albuminuria (Table 1). The weighted prevalence of diabetes was substantially higher in the elevated albuminuria group (49.8% vs 16.9%, *p* < 0.001), as was hypertension prevalence (83.8% vs 75.0%, *p* = 0.030). Race/ethnicity and smoking distributions also differed between groups. There was little difference in sex distribution or mean BMI.
+
+```{r table1}
+library(gtsummary)
+
+ard_reloaded$elevated_acr_f <- factor(
+  ard_reloaded$elevated_acr,
+  levels = c(FALSE, TRUE),
+  labels = c("ACR < 30 mg/g", "ACR ≥ 30 mg/g")
+)
+
+ard_reloaded$sex_f <- factor(
+  ard_reloaded$RIAGENDR,
+  levels = c(1, 2),
+  labels = c("Male", "Female")
+)
+
+ard_reloaded$race_f <- factor(
+  ard_reloaded$RIDRETH3,
+  levels = c(1, 2, 3, 4, 6, 7),
+  labels = c(
+    "Mexican American", "Other Hispanic",
+    "Non-Hispanic White", "Non-Hispanic Black",
+    "Non-Hispanic Asian", "Other/Multi"
+  )
+)
+
+ard_reloaded$diabetes_f <- factor(
+  ard_reloaded$diabetes, levels = c(0, 1), labels = c("No", "Yes")
+)
+
+ard_reloaded$hypertension_f <- factor(
+  ard_reloaded$hypertension, levels = c(0, 1), labels = c("No", "Yes")
+)
+
+ard_reloaded$obesity_f <- factor(
+  ard_reloaded$obesity, levels = c(0, 1), labels = c("No", "Yes")
+)
+
+design <- update(
+  design,
+  elevated_acr_f = ard_reloaded$elevated_acr_f,
+  sex_f = ard_reloaded$sex_f,
+  race_f = ard_reloaded$race_f,
+  diabetes_f = ard_reloaded$diabetes_f,
+  hypertension_f = ard_reloaded$hypertension_f,
+  obesity_f = ard_reloaded$obesity_f
+)
+
+tbl_svysummary(
+  design,
+  by = elevated_acr_f,
+  include = c(
+    RIDAGEYR, BMXBMI, LBXGH, mean_sbp, egfr,
+    sex_f, race_f, smoking_status,
+    diabetes_f, hypertension_f, obesity_f
+  ),
+  label = list(
+    RIDAGEYR ~ "Age (years)",
+    BMXBMI ~ "BMI (kg/m²)",
+    LBXGH ~ "HbA1c (%)",
+    mean_sbp ~ "Mean systolic BP (mmHg)",
+    egfr ~ "eGFR (mL/min/1.73 m²)",
+    sex_f ~ "Sex",
+    race_f ~ "Race/ethnicity",
+    smoking_status ~ "Smoking status",
+    diabetes_f ~ "Diabetes",
+    hypertension_f ~ "Hypertension",
+    obesity_f ~ "Obesity"
+  ),
+  statistic = list(
+    all_continuous() ~ "{mean} ({sd})",
+    all_categorical() ~ "{p}%"
+  ),
+  digits = list(
+    all_continuous() ~ 1,
+    all_categorical() ~ 1
+  ),
+  missing = "no"
+) %>%
+  add_overall() %>%
+  add_p(
+    test = list(
+      all_continuous() ~ "svy.t.test",
+      all_categorical() ~ "svy.chisq.test"
+    )
+  ) %>%
+  modify_header(
+    label = "**Characteristic**",
+    all_stat_cols() ~ "**{level}**  \nN = {n_unweighted}"
+  ) %>%
+  modify_footnote_header(
+    footnote = paste(
+      "Unweighted sample sizes; survey-weighted means (SD) and percentages.",
+      "For diabetes, hypertension and obesity, percentages represent participants with the condition."
+      
+    ),
+    columns = all_stat_cols(),
+    replace = TRUE
+  ) %>%
+  modify_footnote_header(
+    footnote = paste(
+      "Design-based t-test for continuous variables;",
+      "Rao–Scott adjusted Pearson’s χ² test for categorical variables."
+    ),
+    columns = p.value,
+    replace = TRUE
+  ) %>%
+  bold_labels() %>%
+  modify_caption(
+    "**Table 1.** Participant characteristics by elevated albuminuria status"
+  )
+```
 
 ## Prevalence of elevated albuminuria
+```{r prevalence}
+prev <- svyciprop(~elevated_acr, design, method = "logit", na.rm = TRUE)
+
+prev_table <- data.frame(
+  Prevalence = sprintf("%.1f%%", prev * 100),
+  CI = sprintf("%.1f%% to %.1f%%", 
+               confint(prev)[1] * 100, 
+               confint(prev)[2] * 100)
+)
+
+names(prev_table) <- c("Prevalence", "95% CI")
+
+knitr::kable(prev_table, 
+             caption = "Survey-weighted prevalence of elevated albuminuria (ACR ≥ 30 mg/g)",
+             align = "c")
+```
+The survey-weighted prevalence of elevated albuminuria was 10.9 % (95 % CI 10.0–12.0 %).
 
 ## Associations with elevated albuminuria
+
+```{r complete-case, include=FALSE}
+# Scaled continuous predictors required by the locked model
+design <- update(
+  design,
+  age_per10 = RIDAGEYR / 10,
+  hba1c     = LBXGH,
+  sbp_per10 = mean_sbp / 10,
+  bmi_per5  = BMXBMI / 5
+)
+
+# Restrict the survey design to complete cases on the seven predictors
+design_cc <- subset(
+  design,
+  !is.na(age_per10) & !is.na(sex_f) & !is.na(race_f) &
+  !is.na(hba1c) & !is.na(sbp_per10) & !is.na(bmi_per5) &
+  !is.na(smoking_status)
+)
+
+cc_summary <- tibble(
+  Eligible_N      = 3370L,
+  Complete_case_N = nrow(design_cc$variables),
+  Events          = sum(design_cc$variables$elevated_acr),
+  Excluded        = 3370L - nrow(design_cc$variables)
+)
+
+knitr::kable(
+  cc_summary,
+  caption = "Complete-case sample size for the primary logistic regression model"
+)
+```
+Of the 3,370 eligible participants, 3,270 (97 %) had complete data on the seven predictors and were included in the regression; 100 participants (3 %) were excluded, mainly because of missing systolic blood pressure or BMI. The complete-case sample contained 401 events.
+
+```{r primary-model}
+# Set reference categories: Male and Non-Hispanic White
+design_cc <- update(
+  design_cc,
+  sex_f  = relevel(sex_f, ref = "Male"),
+  race_f = relevel(race_f, ref = "Non-Hispanic White")
+)
+
+# Primary survey-weighted logistic regression
+model <- svyglm(
+  elevated_acr ~ age_per10 + sex_f + race_f + hba1c +
+                 sbp_per10 + bmi_per5 + smoking_status,
+  design = design_cc,
+  family = quasibinomial()
+)
+
+# Extract adjusted ORs and 95% CIs
+library(broom)
+library(scales)
+
+or_table <- tidy(model, conf.int = TRUE, exponentiate = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    OR      = round(estimate, 2),
+    CI_low  = round(conf.low, 2),
+    CI_high = round(conf.high, 2),
+    p       = pvalue(p.value)
+  ) %>%
+  select(term, OR, CI_low, CI_high, p)
+
+# Readable labels
+or_table <- or_table %>%
+  mutate(
+    Characteristic = case_when(
+      term == "age_per10"                   ~ "Age (per 10 years)",
+      term == "sex_fFemale"                 ~ "Female (vs Male)",
+      term == "race_fMexican American"      ~ "Mexican American (vs Non-Hispanic White)",
+      term == "race_fOther Hispanic"        ~ "Other Hispanic (vs Non-Hispanic White)",
+      term == "race_fNon-Hispanic Black"    ~ "Non-Hispanic Black (vs Non-Hispanic White)",
+      term == "race_fNon-Hispanic Asian"    ~ "Non-Hispanic Asian (vs Non-Hispanic White)",
+      term == "race_fOther/Multi"           ~ "Other/Multi (vs Non-Hispanic White)",
+      term == "hba1c"                       ~ "HbA1c (per percentage point)",
+      term == "sbp_per10"                   ~ "Systolic BP (per 10 mmHg)",
+      term == "bmi_per5"                    ~ "BMI (per 5 kg/m²)",
+      term == "smoking_statusFormer"        ~ "Former smoker (vs Never)",
+      term == "smoking_statusCurrent"       ~ "Current smoker (vs Never)",
+      TRUE ~ term
+    )
+  ) %>%
+  select(Characteristic, OR, CI_low, CI_high, p)
+
+knitr::kable(
+  or_table,
+  col.names = c("Characteristic", "Adjusted OR", "95% CI lower", "95% CI upper", "p-value"),
+  caption = "Adjusted odds ratios for elevated albuminuria from the primary survey-weighted logistic regression model",
+  align = "lcccc"
+)
+```
+Older age, higher HbA1c and higher mean systolic blood pressure were associated with elevated albuminuria after adjustment for the other covariates. Adjusted odds ratios were 1.33 per 10-year increase in age (95% CI 1.15–1.55), 1.52 per percentage-point increase in HbA1c (95% CI 1.33–1.73), and 1.25 per 10 mmHg increase in systolic blood pressure (95% CI 1.03–1.52). Current smoking had an estimated adjusted odds ratio of 1.73 compared with never smoking, although the estimate was imprecise (95% CI 1.00–3.00). No statistically significant associations were observed for sex, BMI, former smoking or the individual race/ethnicity contrasts with non-Hispanic White participants.
+
+
+```{r model-checks, echo=FALSE, results='hide'}
+# Events-per-variable
+n_events  <- sum(design_cc$variables$elevated_acr)
+n_params  <- length(coef(model)) - 1          # exclude intercept
+epv       <- n_events / n_params
+
+tibble(
+  Events     = n_events,
+  Parameters = n_params,
+  EPV        = round(epv, 1)
+) %>%
+  knitr::kable(caption = "Events-per-variable assessment")
+```
+```{r linearity-check, echo=FALSE, results='hide'}
+# Check linearity by testing a quadratic term for each continuous predictor
+
+quad_age <- svyglm(
+  elevated_acr ~ age_per10 + I(age_per10^2) + sex_f + race_f +
+                 hba1c + sbp_per10 + bmi_per5 + smoking_status,
+  design = design_cc, family = quasibinomial()
+)
+
+quad_hba1c <- svyglm(
+  elevated_acr ~ age_per10 + sex_f + race_f +
+                 hba1c + I(hba1c^2) + sbp_per10 + bmi_per5 + smoking_status,
+  design = design_cc, family = quasibinomial()
+)
+
+quad_sbp <- svyglm(
+  elevated_acr ~ age_per10 + sex_f + race_f +
+                 hba1c + sbp_per10 + I(sbp_per10^2) + bmi_per5 + smoking_status,
+  design = design_cc, family = quasibinomial()
+)
+
+quad_bmi <- svyglm(
+  elevated_acr ~ age_per10 + sex_f + race_f +
+                 hba1c + sbp_per10 + bmi_per5 + I(bmi_per5^2) + smoking_status,
+  design = design_cc, family = quasibinomial()
+)
+
+# Extract p-value of each quadratic term
+quad_p <- tibble(
+  Term = c("Age squared", "HbA1c squared", "Systolic BP squared", "BMI squared"),
+  p_value = c(
+    summary(quad_age)$coefficients["I(age_per10^2)", "Pr(>|t|)"],
+    summary(quad_hba1c)$coefficients["I(hba1c^2)", "Pr(>|t|)"],
+    summary(quad_sbp)$coefficients["I(sbp_per10^2)", "Pr(>|t|)"],
+    summary(quad_bmi)$coefficients["I(bmi_per5^2)", "Pr(>|t|)"]
+  )
+)
+
+knitr::kable(quad_p, digits = 3,
+             caption = "Quadratic term tests for linearity of continuous predictors")
+```
+There were 33.4 outcome events per estimated predictor parameter. Exploratory quadratic-term tests provided no evidence of quadratic departures from the assumed linear relationships with the log odds (all p > 0.13).
+
 
 # Discussion
 
