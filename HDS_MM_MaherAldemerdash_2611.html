@@ -1350,8 +1350,8 @@ risk factors and preserved kidney filtration</a></h2>
       <li><a href="#obesity" id="toc-obesity"><span class="toc-section-number">3.3.6</span> Obesity</a></li>
       <li><a href="#combined-metabolic-risk" id="toc-combined-metabolic-risk"><span class="toc-section-number">3.3.7</span> Combined metabolic
       risk</a></li>
-      <li><a href="#demographic-laboratory-and-smoking-variables" id="toc-demographic-laboratory-and-smoking-variables"><span class="toc-section-number">3.3.8</span> Demographic, laboratory
-      and smoking variables</a></li>
+      <li><a href="#demographic-and-continuous-covariates" id="toc-demographic-and-continuous-covariates"><span class="toc-section-number">3.3.8</span> Demographic and continuous
+      covariates</a></li>
       <li><a href="#smoking-status" id="toc-smoking-status"><span class="toc-section-number">3.3.9</span> Smoking status</a></li>
       <li><a href="#eligibility-criteria-and-creation-of-the-analysis-ready-dataset" id="toc-eligibility-criteria-and-creation-of-the-analysis-ready-dataset"><span class="toc-section-number">3.3.10</span> Eligibility criteria and
       creation of the analysis-ready dataset</a></li>
@@ -1832,6 +1832,11 @@ basis of these range checks.</p>
 <div id="phenotype-definitions-and-analysis-ready-dataset-construction" class="section level2" number="3.3">
 <h2><span class="header-section-number">3.3</span> Phenotype definitions
 and analysis-ready dataset construction</h2>
+<p>All variables were derived for the full linked dataset of 11,933
+participants; summaries in the following subsections describe adults
+aged ≥20 years, and study eligibility was applied only after all
+derivations were complete (<em>Eligibility criteria and creation of the
+analysis-ready dataset</em>).</p>
 <div id="data-integration-and-participant-linkage" class="section level3" number="3.3.1">
 <h3><span class="header-section-number">3.3.1</span> Data integration
 and participant linkage</h3>
@@ -1864,8 +1869,7 @@ mg/g.</p>
 <p>Among 7,809 adults, serum creatinine was available for 5,443, all of
 whom had eGFR calculated. Median eGFR was 93.6 mL/min/1.73 m² (range
 3.5–143.4). Urine ACR was available for 5,910 adults, and both
-measurements for 5,343. These counts precede application of the full
-study eligibility criteria.</p>
+measurements for 5,343.</p>
 </div>
 <div id="mean-blood-pressure" class="section level3" number="3.3.3">
 <h3><span class="header-section-number">3.3.3</span> Mean blood
@@ -1905,10 +1909,11 @@ following situations:</p>
 measured and below 6.5 %, <strong>and</strong> neither insulin nor
 diabetes pills were reported.</li>
 </ul>
-<p>When a participant reported no diagnosis, the medication items were
-not asked; the resulting structural missingness was treated as
-non-informative. In all other cases diabetes status was left
-<strong>indeterminate</strong>.</p>
+<p>Insulin use was asked only of participants reporting diagnosed
+diabetes, and diabetes pill use only of those reporting diagnosed or
+borderline diabetes or prediabetes; the resulting structural missingness
+was treated as non-informative. In all other cases diabetes status was
+left <strong>indeterminate</strong>.</p>
 </div>
 <div id="hypertension" class="section level3" number="3.3.5">
 <h3><span class="header-section-number">3.3.5</span> Hypertension</h3>
@@ -1934,7 +1939,8 @@ and were below the thresholds above.</li>
 asked; the resulting structural missingness was treated as
 non-informative. In all other cases hypertension status was left
 <strong>indeterminate</strong>. The blood-pressure thresholds follow the
-2017 ACC/AHA guideline definition of hypertension (≥130/80 mmHg).</p>
+2017 ACC/AHA guideline definition of hypertension (≥130/80 mmHg; Whelton
+et al., 2018).</p>
 </div>
 <div id="obesity" class="section level3" number="3.3.6">
 <h3><span class="header-section-number">3.3.6</span> Obesity</h3>
@@ -1943,17 +1949,16 @@ non-informative. In all other cases hypertension status was left
 <p>Obesity was classified as <strong>absent</strong> if BMI was measured
 and was below 30 kg/m².</p>
 <p>Participants without a valid BMI measurement were classified as
-<strong>indeterminate</strong>. BMI was also retained as a continuous
-variable for later analysis.</p>
+<strong>indeterminate</strong>.</p>
 </div>
 <div id="combined-metabolic-risk" class="section level3" number="3.3.7">
 <h3><span class="header-section-number">3.3.7</span> Combined metabolic
 risk</h3>
-<p>The three phenotypes (DM, HTN, Obesity) were combined into a single
-indicator variable (<code>metabolic_risk</code>). A participant was
-classified as having metabolic risk if at least one phenotype was
-present. The indicator was absent only when all three phenotypes were
-absent, and indeterminate otherwise.</p>
+<p>The three phenotypes (diabetes, hypertension and obesity) were
+combined into a single indicator variable (<code>metabolic_risk</code>).
+A participant was classified as having metabolic risk if at least one
+phenotype was present. The indicator was absent only when all three
+phenotypes were absent, and indeterminate otherwise.</p>
 <table>
 <caption>Metabolic phenotype classification among adults aged ≥20 years,
 before kidney-function and albuminuria eligibility criteria</caption>
@@ -1998,16 +2003,15 @@ before kidney-function and albuminuria eligibility criteria</caption>
 </tr>
 </tbody>
 </table>
-<p>Indeterminate status mainly reflected missing examination or
-laboratory data rather than conflicting information: of the 1,762 adults
-with indeterminate diabetes status, 1,514 were interviewed but not
-examined. Indeterminacy was lower for the combined indicator because a
-single present phenotype, including one established by self-report
-alone, was sufficient for classification.</p>
+<p>Most indeterminate diabetes classifications arose because absence
+required a measured HbA1c: of the 1,762 adults with indeterminate
+status, 1,514 (86%) were not examined and therefore had no HbA1c. The
+combined indicator had fewer indeterminate cases because one present
+phenotype, including a self-reported diagnosis, was sufficient.</p>
 </div>
-<div id="demographic-laboratory-and-smoking-variables" class="section level3" number="3.3.8">
-<h3><span class="header-section-number">3.3.8</span> Demographic,
-laboratory and smoking variables</h3>
+<div id="demographic-and-continuous-covariates" class="section level3" number="3.3.8">
+<h3><span class="header-section-number">3.3.8</span> Demographic and
+continuous covariates</h3>
 <p>Age (years), sex and race/ethnicity were taken from the demographic
 file and retained in their original NHANES coding. Glycated haemoglobin
 (HbA1c, %), body mass index (BMI, kg/m²) and derived mean systolic blood
@@ -2033,9 +2037,7 @@ lifetime (SMQ020 = 2).<br />
 classified as never smokers, 2,050 (26.3%) as former smokers and 1,183
 (15.1%) as current smokers. Smoking status could not be determined for
 29 participants (0.4%) because the available questionnaire responses
-were insufficient for classification. These figures describe the adult
-source population before application of the study eligibility
-criteria.</p>
+were insufficient for classification.</p>
 </div>
 <div id="eligibility-criteria-and-creation-of-the-analysis-ready-dataset" class="section level3" number="3.3.10">
 <h3><span class="header-section-number">3.3.10</span> Eligibility
@@ -3010,20 +3012,20 @@ substantially higher in the elevated albuminuria group (49.8% vs 16.9%,
 <em>p</em> = 0.030). Race/ethnicity and smoking distributions also
 differed between groups. There was little difference in sex distribution
 or mean BMI.</p>
-<div id="rflyhpipcj" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#rflyhpipcj table {
+<div id="rxunmszavt" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#rxunmszavt table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#rflyhpipcj thead, #rflyhpipcj tbody, #rflyhpipcj tfoot, #rflyhpipcj tr, #rflyhpipcj td, #rflyhpipcj th {
+#rxunmszavt thead, #rxunmszavt tbody, #rxunmszavt tfoot, #rxunmszavt tr, #rxunmszavt td, #rxunmszavt th {
 border-style: none;
 }
-#rflyhpipcj p {
+#rxunmszavt p {
 margin: 0;
 padding: 0;
 }
-#rflyhpipcj .gt_table {
+#rxunmszavt .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -3048,11 +3050,11 @@ border-left-style: none;
 border-left-width: 2px;
 border-left-color: #D3D3D3;
 }
-#rflyhpipcj .gt_caption {
+#rxunmszavt .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#rflyhpipcj .gt_title {
+#rxunmszavt .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -3063,7 +3065,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#rflyhpipcj .gt_subtitle {
+#rxunmszavt .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -3074,7 +3076,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#rflyhpipcj .gt_heading {
+#rxunmszavt .gt_heading {
 background-color: #FFFFFF;
 text-align: center;
 border-bottom-color: #FFFFFF;
@@ -3085,12 +3087,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#rflyhpipcj .gt_bottom_border {
+#rxunmszavt .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#rflyhpipcj .gt_col_headings {
+#rxunmszavt .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -3104,7 +3106,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#rflyhpipcj .gt_col_heading {
+#rxunmszavt .gt_col_heading {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -3123,7 +3125,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#rflyhpipcj .gt_column_spanner_outer {
+#rxunmszavt .gt_column_spanner_outer {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -3134,13 +3136,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#rflyhpipcj .gt_column_spanner_outer:first-child {
+#rxunmszavt .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#rflyhpipcj .gt_column_spanner_outer:last-child {
+#rxunmszavt .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#rflyhpipcj .gt_column_spanner {
+#rxunmszavt .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
@@ -3151,10 +3153,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#rflyhpipcj .gt_spanner_row {
+#rxunmszavt .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#rflyhpipcj .gt_group_heading {
+#rxunmszavt .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3179,7 +3181,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#rflyhpipcj .gt_empty_group_heading {
+#rxunmszavt .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -3193,13 +3195,13 @@ border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 vertical-align: middle;
 }
-#rflyhpipcj .gt_from_md > :first-child {
+#rxunmszavt .gt_from_md > :first-child {
 margin-top: 0;
 }
-#rflyhpipcj .gt_from_md > :last-child {
+#rxunmszavt .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#rflyhpipcj .gt_row {
+#rxunmszavt .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3217,7 +3219,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#rflyhpipcj .gt_stub {
+#rxunmszavt .gt_stub {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -3229,7 +3231,7 @@ border-right-color: #D3D3D3;
 padding-left: 5px;
 padding-right: 5px;
 }
-#rflyhpipcj .gt_stub_row_group {
+#rxunmszavt .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -3242,13 +3244,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#rflyhpipcj .gt_row_group_first td {
+#rxunmszavt .gt_row_group_first td {
 border-top-width: 2px;
 }
-#rflyhpipcj .gt_row_group_first th {
+#rxunmszavt .gt_row_group_first th {
 border-top-width: 2px;
 }
-#rflyhpipcj .gt_summary_row {
+#rxunmszavt .gt_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -3257,14 +3259,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#rflyhpipcj .gt_first_summary_row {
+#rxunmszavt .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #D3D3D3;
 }
-#rflyhpipcj .gt_first_summary_row.thick {
+#rxunmszavt .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#rflyhpipcj .gt_last_summary_row {
+#rxunmszavt .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3273,7 +3275,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#rflyhpipcj .gt_grand_summary_row {
+#rxunmszavt .gt_grand_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -3282,7 +3284,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#rflyhpipcj .gt_first_grand_summary_row {
+#rxunmszavt .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3291,7 +3293,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #D3D3D3;
 }
-#rflyhpipcj .gt_last_grand_summary_row_top {
+#rxunmszavt .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3300,10 +3302,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #D3D3D3;
 }
-#rflyhpipcj .gt_striped {
+#rxunmszavt .gt_striped {
 background-color: rgba(128, 128, 128, 0.05);
 }
-#rflyhpipcj .gt_table_body {
+#rxunmszavt .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -3311,7 +3313,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#rflyhpipcj .gt_footnotes {
+#rxunmszavt .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -3324,7 +3326,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#rflyhpipcj .gt_footnote {
+#rxunmszavt .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -3332,7 +3334,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#rflyhpipcj .gt_sourcenotes {
+#rxunmszavt .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -3345,64 +3347,64 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#rflyhpipcj .gt_sourcenote {
+#rxunmszavt .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#rflyhpipcj .gt_left {
+#rxunmszavt .gt_left {
 text-align: left;
 }
-#rflyhpipcj .gt_center {
+#rxunmszavt .gt_center {
 text-align: center;
 }
-#rflyhpipcj .gt_right {
+#rxunmszavt .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#rflyhpipcj .gt_font_normal {
+#rxunmszavt .gt_font_normal {
 font-weight: normal;
 }
-#rflyhpipcj .gt_font_bold {
+#rxunmszavt .gt_font_bold {
 font-weight: bold;
 }
-#rflyhpipcj .gt_font_italic {
+#rxunmszavt .gt_font_italic {
 font-style: italic;
 }
-#rflyhpipcj .gt_super {
+#rxunmszavt .gt_super {
 font-size: 65%;
 }
-#rflyhpipcj .gt_footnote_marks {
+#rxunmszavt .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#rflyhpipcj .gt_asterisk {
+#rxunmszavt .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#rflyhpipcj .gt_indent_1 {
+#rxunmszavt .gt_indent_1 {
 text-indent: 5px;
 }
-#rflyhpipcj .gt_indent_2 {
+#rxunmszavt .gt_indent_2 {
 text-indent: 10px;
 }
-#rflyhpipcj .gt_indent_3 {
+#rxunmszavt .gt_indent_3 {
 text-indent: 15px;
 }
-#rflyhpipcj .gt_indent_4 {
+#rxunmszavt .gt_indent_4 {
 text-indent: 20px;
 }
-#rflyhpipcj .gt_indent_5 {
+#rxunmszavt .gt_indent_5 {
 text-indent: 25px;
 }
-#rflyhpipcj .katex-display {
+#rxunmszavt .katex-display {
 display: inline-flex !important;
 margin-bottom: 0.75em !important;
 }
-#rflyhpipcj div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#rxunmszavt div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
 height: 0px !important;
 }
 </style>

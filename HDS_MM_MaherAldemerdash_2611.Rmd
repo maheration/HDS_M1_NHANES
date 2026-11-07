@@ -408,6 +408,7 @@ knitr::kable(availability_summary,
 ```
 
 ## Phenotype definitions and analysis-ready dataset construction
+All variables were derived for the full linked dataset of `r format(nrow(demo), big.mark = ",")` participants; summaries in the following subsections describe adults aged ≥20 years, and study eligibility was applied only after all derivations were complete (*Eligibility criteria and creation of the analysis-ready dataset*).
 
 ### Data integration and participant linkage
 
@@ -524,7 +525,7 @@ knitr::kable(
   caption = "Kidney function and albuminuria: availability and distribution after derivation"
 )
 ```
-Among `r format(kidney_check$n_adults, big.mark = ",")` adults, serum creatinine was available for `r format(kidney_check$n_with_creatinine, big.mark = ",")`, all of whom had eGFR calculated. Median eGFR was `r round(kidney_check$egfr_median, 1)` mL/min/1.73 m² (range `r round(kidney_check$egfr_min, 1)`–`r round(kidney_check$egfr_max, 1)`). Urine ACR was available for `r format(kidney_check$n_with_acr, big.mark = ",")` adults, and both measurements for `r format(kidney_check$n_with_both, big.mark = ",")`. These counts precede application of the full study eligibility criteria.
+Among `r format(kidney_check$n_adults, big.mark = ",")` adults, serum creatinine was available for `r format(kidney_check$n_with_creatinine, big.mark = ",")`, all of whom had eGFR calculated. Median eGFR was `r round(kidney_check$egfr_median, 1)` mL/min/1.73 m² (range `r round(kidney_check$egfr_min, 1)`–`r round(kidney_check$egfr_max, 1)`). Urine ACR was available for `r format(kidney_check$n_with_acr, big.mark = ",")` adults, and both measurements for `r format(kidney_check$n_with_both, big.mark = ",")`.
 
 ### Mean blood pressure
 
@@ -607,7 +608,7 @@ Diabetes was classified as **absent** in either of the following situations:
 - the participant reported no diagnosis (DIQ010 = 2) **and** HbA1c was measured and below 6.5 %, **or**
 - the participant reported borderline diabetes (DIQ010 = 3), HbA1c was measured and below 6.5 %, **and** neither insulin nor diabetes pills were reported.
 
-When a participant reported no diagnosis, the medication items were not asked; the resulting structural missingness was treated as non-informative. In all other cases diabetes status was left **indeterminate**.
+Insulin use was asked only of participants reporting diagnosed diabetes, and diabetes pill use only of those reporting diagnosed or borderline diabetes or prediabetes; the resulting structural missingness was treated as non-informative. In all other cases diabetes status was left **indeterminate**.
 
 ```{r dm-derive}
 ard <- ard %>%
@@ -746,9 +747,9 @@ ind_dm <- ard %>% filter(RIDAGEYR >= 20, is.na(diabetes))
 n_ind_dm     <- nrow(ind_dm)
 n_ind_dm_nox <- sum(ind_dm$SEQN %in% not_examined_ids)
 ```
-Indeterminate status mainly reflected missing examination or laboratory data rather than conflicting information: of the `r format(n_ind_dm, big.mark = ",")` adults with indeterminate diabetes status, `r format(n_ind_dm_nox, big.mark = ",")` were interviewed but not examined. Indeterminacy was lower for the combined indicator because a single present phenotype, including one established by self-report alone, was sufficient for classification.
+Most indeterminate diabetes classifications arose because absence required a measured HbA1c: of the `r format(n_ind_dm, big.mark = ",")` adults with indeterminate status, `r format(n_ind_dm_nox, big.mark = ",")` (`r round(100 * n_ind_dm_nox / n_ind_dm)`%) were not examined and therefore had no HbA1c. The combined indicator had fewer indeterminate cases because one present phenotype, including a self-reported diagnosis, was sufficient.
 
-### Demographic, laboratory and smoking variables
+### Demographic and continuous covariates
 
 Age (years), sex and race/ethnicity were taken from the demographic file and retained in their original NHANES coding. Glycated haemoglobin (HbA1c, %), body mass index (BMI, kg/m²) and derived mean systolic blood pressure (mmHg) were retained as continuous covariates.
 
@@ -786,7 +787,7 @@ smoking_summary <- ard %>%
   )
 
 ```
-Among 7,809 adults aged 20 years or older, 4,547 (58.2%) were classified as never smokers, 2,050 (26.3%) as former smokers and 1,183 (15.1%) as current smokers. Smoking status could not be determined for 29 participants (0.4%) because the available questionnaire responses were insufficient for classification. These figures describe the adult source population before application of the study eligibility criteria.
+Among 7,809 adults aged 20 years or older, 4,547 (58.2%) were classified as never smokers, 2,050 (26.3%) as former smokers and 1,183 (15.1%) as current smokers. Smoking status could not be determined for 29 participants (0.4%) because the available questionnaire responses were insufficient for classification. 
 
 ### Eligibility criteria and creation of the analysis-ready dataset
 Eligibility criteria were applied sequentially, and the number of participants remaining at each step was recorded to document cohort selection.
