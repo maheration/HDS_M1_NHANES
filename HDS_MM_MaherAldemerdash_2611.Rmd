@@ -790,7 +790,7 @@ smoking_summary <- ard %>%
 Among 7,809 adults aged 20 years or older, 4,547 (58.2%) were classified as never smokers, 2,050 (26.3%) as former smokers and 1,183 (15.1%) as current smokers. Smoking status could not be determined for 29 participants (0.4%) because the available questionnaire responses were insufficient for classification. 
 
 ### Eligibility criteria and creation of the analysis-ready dataset
-Eligibility criteria were applied sequentially, and the number of participants remaining at each step was recorded to document cohort selection.
+Eligibility criteria were applied sequentially, and the number of participants remaining and excluded at each step is shown below.
 
 ```{r eligibility-flag}
 ard <- ard %>%
@@ -807,24 +807,24 @@ ard <- ard %>%
                      eligible_metabolic_risk
   )
 
+# Cumulative steps
+step_preg   <- ard$eligible_age & ard$eligible_not_pregnant
+step_kidney <- step_preg & ard$eligible_kidney_measurements
+step_egfr   <- step_kidney & ard$eligible_egfr
+
 flow <- tibble(
   Step = c(
     "Demographic file",
     "Adults aged ≥ 20 years",
-    "After exclusion of pregnants",
+    "Not pregnant",
     "Valid ACR and serum creatinine",
     "eGFR ≥ 60 mL/min/1.73 m²",
     "≥ 1 metabolic risk factor (final eligible population)"
   ),
-  N = c(
-    nrow(demo),
-    sum(ard$eligible_age, na.rm = TRUE),
-    sum(ard$eligible_age & ard$eligible_not_pregnant, na.rm = TRUE),
-    sum(ard$eligible_age & ard$eligible_not_pregnant & ard$eligible_kidney_measurements, na.rm = TRUE),
-    sum(ard$eligible_age & ard$eligible_not_pregnant & ard$eligible_kidney_measurements & ard$eligible_egfr, na.rm = TRUE),
-    sum(ard$eligible_study, na.rm = TRUE)
-  )
-)
+  N = c(nrow(demo), sum(ard$eligible_age), sum(step_preg),
+        sum(step_kidney), sum(step_egfr), sum(ard$eligible_study))
+) %>%
+  mutate(Excluded = c(NA, -diff(N)))
 
 stopifnot(
   all(diff(flow$N) <= 0),
@@ -832,100 +832,59 @@ stopifnot(
   !anyNA(ard$eligible_study)
 )
 
-knitr::kable(
-  flow,
-  caption = "Participant selection flow"
-)
+options(knitr.kable.NA = "—")
+knitr::kable(flow, format.args = list(big.mark = ","),
+             caption = "Participant selection flow")
+
+# For text: reasons for exclusion at the metabolic-risk step
+n_meta_absent <- sum(step_egfr & ard$metabolic_risk %in% 0)
+n_meta_indet  <- sum(step_egfr & is.na(ard$metabolic_risk))
 ```
-Of the 11,933 participants in the demographic file, 7,809 were aged 20 years or older; 7,768 remained after excluding participants identified as pregnant. Following sequential application of the kidney-measurement, eGFR and metabolic-risk eligibility criteria, 3,370 participants remained in the eligible study population.
 
 ```{r eligibility-event-summary}
-stopifnot(
-  !anyNA(ard$elevated_acr[ard$eligible_study])
-)
-ard %>%
-  filter(eligible_study) %>%
-  summarise(
-    `Eligible participants` = n(),
-    `Elevated albuminuria (ACR ≥ 30)` = sum(elevated_acr, na.rm = TRUE)
-  ) %>%
-  knitr::kable(caption = "Eligible population and primary outcome events")
+stopifnot(!anyNA(ard$elevated_acr[ard$eligible_study]))
+n_eligible <- sum(ard$eligible_study)
+n_events   <- sum(ard$elevated_acr[ard$eligible_study])
 ```
+
+At the final step, `r format(n_meta_absent, big.mark = ",")` participants were excluded because they had no metabolic risk factor and `r n_meta_indet` because their status was indeterminate. Of the `r format(n_eligible, big.mark = ",")` eligible participants, `r n_events` (`r round(100 * n_events / n_eligible, 1)`%) had elevated albuminuria.
+
+
 ### Missing data
 
-Missingness was assessed among the 3,370 participants who met the study eligibility criteria. The number and percentage of missing values were calculated for the primary outcome and the candidate regression covariates (age, sex, race/ethnicity, HbA1c, mean systolic blood pressure, BMI and smoking status).
-
-Participants were not excluded from the analysis-ready dataset solely because of missing regression covariates. The extent of missingness was documented to inform the subsequent analytical approach.
+Missingness was assessed among eligible participants for the outcome and the seven prespecified regression covariates to define the complete-case analytic sample.
 
 ```{r missingness-summary}
-eligible <- ard %>%
-  filter(eligible_study)
+eligible <- ard %>% filter(eligible_study)
 
-missingness <- tibble(
-  Variable = c(
-    "Elevated albuminuria",
-    "Age",
-    "Sex",
-    "Race/ethnicity",
-    "HbA1c",
-    "Mean systolic blood pressure",
-    "BMI",
-    "Smoking status"
-  ),
-  Missing_N = c(
-    sum(is.na(eligible$elevated_acr)),
-    sum(is.na(eligible$RIDAGEYR)),
-    sum(is.na(eligible$RIAGENDR)),
-    sum(is.na(eligible$RIDRETH3)),
-    sum(is.na(eligible$LBXGH)),
-    sum(is.na(eligible$mean_sbp)),
-    sum(is.na(eligible$BMXBMI)),
-    sum(is.na(eligible$smoking_status))
-  ),
-  Total_N = nrow(eligible)
-) %>%
-  mutate(Missing_pct = round(100 * Missing_N / Total_N, 1))
+model_vars <- c("elevated_acr", "RIDAGEYR", "RIAGENDR", "RIDRETH3",
+                "LBXGH", "mean_sbp", "BMXBMI", "smoking_status")
 
-knitr::kable(
-  missingness,
-  caption = "Missing data among eligible participants"
-)
+n_miss     <- vapply(model_vars, function(v) sum(is.na(eligible[[v]])), integer(1))
+n_complete <- sum(complete.cases(eligible[model_vars]))
+
+# Variables reported as complete in the text
+stopifnot(all(n_miss[c("elevated_acr", "RIDAGEYR", "RIAGENDR",
+                       "RIDRETH3", "LBXGH")] == 0))
+
+miss_txt <- function(v) sprintf("%d (%.1f%%)", n_miss[[v]], 100 * n_miss[[v]] / nrow(eligible))
 ```
-Among the 3,370 eligible participants, the primary outcome, age, sex, race/ethnicity and HbA1c were complete. Missingness was highest for mean systolic blood pressure (75 participants; 2.2 %), followed by BMI (23; 0.7 %) and smoking status (6; 0.2 %). All eligible participants were retained in the analysis-ready dataset regardless of covariate completeness.
+
+Among the `r format(nrow(eligible), big.mark = ",")` eligible participants, the outcome, age, sex, race/ethnicity and HbA1c were complete. Mean systolic blood pressure was missing for `r miss_txt("mean_sbp")`, BMI for `r miss_txt("BMXBMI")` and smoking status for `r miss_txt("smoking_status")`.
+
+Overall, `r format(n_complete, big.mark = ",")` participants    (`r sprintf("%.1f", 100 * n_complete / nrow(eligible))`%) had complete data on all model variables. Missingness for every variable in the analysis-ready dataset, including items affected by planned questionnaire skips, is documented in the accompanying codebook.
 
 ### Survey design variables
 
-The survey sampling weight (WTPH2YR), masked variance stratum (SDMVSTRA) and primary sampling unit (SDMVPSU) were retained in the analysis-ready dataset. Completeness of these variables was verified among eligible participants.
-
-
 ```{r survey-design-check}
-survey_vars <- c("WTPH2YR", "SDMVSTRA", "SDMVPSU")
-
-survey_check <- tibble(
-  Variable = survey_vars,
-  Present_in_ARD = survey_vars %in% names(ard)
+stopifnot(
+  all(c("WTPH2YR", "SDMVSTRA", "SDMVPSU") %in% names(eligible)),
+  !anyNA(eligible$WTPH2YR), all(eligible$WTPH2YR > 0),
+  !anyNA(eligible$SDMVSTRA), !anyNA(eligible$SDMVPSU)
 )
-
-knitr::kable(
-  survey_check,
-  caption = "Availability of NHANES survey design variables"
-)
-
-if (all(survey_check$Present_in_ARD)) {
-  eligible %>%
-    summarise(
-      Eligible_N = n(),
-      Missing_weight = sum(is.na(WTPH2YR)),
-      Nonpositive_weight = sum(!is.na(WTPH2YR) & WTPH2YR <= 0),
-      Missing_stratum = sum(is.na(SDMVSTRA)),
-      Missing_PSU = sum(is.na(SDMVPSU))
-    ) %>%
-    knitr::kable(
-      caption = "Survey design variable completeness among eligible participants"
-    )
-}
 ```
-No missing or non-positive values were identified among the 3,370 eligible participants.
+
+The phlebotomy weight (WTPH2YR), masked variance stratum (SDMVSTRA) and primary sampling unit (SDMVPSU) were retained and were complete, with positive weights, for all eligible participants.
 
 ### Analysis-ready dataset
 
