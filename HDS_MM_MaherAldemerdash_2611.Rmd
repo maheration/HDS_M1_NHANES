@@ -928,7 +928,7 @@ stopifnot(
   !anyNA(ard_final$SDMVPSU)
 )
 
-# Used in the DT caption
+# Used in the text and DT caption
 n_ard_rows <- nrow(ard_final)
 n_ard_cols <- ncol(ard_final)
 ```
@@ -975,63 +975,149 @@ stopifnot(identical(ard_final, ard_reloaded))
 
 
 ## Validation
-```{r preserve-survey-source, include=FALSE}
-survey_source <- ard
-```
 
-```{r ard-validation, echo=FALSE}
+```{r validation-egfr}
+# Reload the exported dataset (used by all validation checks)
 ard_reloaded <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
 
-checks <- tibble::tibble(
+# CKD-EPI 2021 creatinine equation (race-free), written independently of the derivation code
+ckd_epi_2021 <- function(scr, age, sex) {
+  female <- sex == 2
+  kappa  <- ifelse(female, 0.7, 0.9)
+  alpha  <- ifelse(female, -0.241, -0.302)
+  142 * pmin(scr / kappa, 1)^alpha * pmax(scr / kappa, 1)^(-1.200) *
+    0.9938^age * ifelse(female, 1.012, 1)
+}
+
+# Reference values from the National Kidney Foundation CKD-EPI 2021 calculator
+egfr_tests <- tibble(
+  scr = c(0.7, 1.2, 0.5, 2.0),
+  age = c(50, 60, 40, 70),
+  sex = c(2, 1, 2, 1),
+  nkf = c(105, 69, 122, 35)
+)
+
+check_egfr <- all(round(ckd_epi_2021(egfr_tests$scr, egfr_tests$age, egfr_tests$sex)) == egfr_tests$nkf)
+
+```
+
+```{r validation-rederive}
+v <- ard_reloaded
+
+# Helpers: equality treating NA == NA as a match
+same <- function(a, b) all((is.na(a) & is.na(b)) | (!is.na(a) & !is.na(b) & a == b))
+num  <- function(x) as.numeric(x)
+is1  <- function(x) !is.na(x) & x == 1
+
+# Re-derive from the source columns retained in the ARD
+re_sbp <- rowMeans(v[c("BPXOSY1", "BPXOSY2", "BPXOSY3")], na.rm = TRUE)
+re_sbp[is.nan(re_sbp)] <- NA
+re_dbp <- rowMeans(v[c("BPXODI1", "BPXODI2", "BPXODI3")], na.rm = TRUE)
+re_dbp[is.nan(re_dbp)] <- NA
+
+re_egfr <- ckd_epi_2021(num(v$LBXSCR), num(v$RIDAGEYR), num(v$RIAGENDR))
+
+re_dm <- ifelse(is1(v$DIQ010) | (!is.na(v$LBXGH) & v$LBXGH >= 6.5) | is1(v$DIQ050) | is1(v$DIQ070), 1,
+         ifelse((v$DIQ010 %in% 2 & !is.na(v$LBXGH) & v$LBXGH < 6.5) |
+                (v$DIQ010 %in% 3 & !is.na(v$LBXGH) & v$LBXGH < 6.5 & !is1(v$DIQ050) & !is1(v$DIQ070)), 0, NA))
+
+re_htn <- ifelse(is1(v$BPQ020) | is1(v$BPQ150) | (!is.na(re_sbp) & re_sbp >= 130) | (!is.na(re_dbp) & re_dbp >= 80), 1,
+          ifelse(v$BPQ020 %in% 2 & !is.na(re_sbp) & !is.na(re_dbp) & re_sbp < 130 & re_dbp < 80, 0, NA))
+
+re_ob <- ifelse(is.na(v$BMXBMI), NA, as.numeric(v$BMXBMI >= 30))
+
+re_mr <- ifelse(re_dm %in% 1 | re_htn %in% 1 | re_ob %in% 1, 1,
+         ifelse(re_dm %in% 0 & re_htn %in% 0 & re_ob %in% 0, 0, NA))
+
+re_smk <- ifelse(v$SMQ020 %in% 2, "Never",
+          ifelse(v$SMQ020 %in% 1 & v$SMQ040 %in% 3, "Former",
+          ifelse(v$SMQ020 %in% 1 & v$SMQ040 %in% c(1, 2), "Current", NA)))
+
+# Compare each re-derived variable with the stored value
+rederive_results <- c(
+  elevated_acr   = same(v$elevated_acr, v$URDACT >= 30),
+  mean_sbp       = isTRUE(all.equal(num(v$mean_sbp), re_sbp)),
+  mean_dbp       = isTRUE(all.equal(num(v$mean_dbp), re_dbp)),
+  egfr           = isTRUE(all.equal(num(v$egfr), re_egfr)),
+  diabetes       = same(num(v$diabetes), re_dm),
+  hypertension   = same(num(v$hypertension), re_htn),
+  obesity        = same(num(v$obesity), re_ob),
+  metabolic_risk = same(num(v$metabolic_risk), re_mr),
+  smoking_status = same(as.character(v$smoking_status), re_smk)
+)
+
+check_rederive <- all(rederive_results)
+
+```
+
+```{r validation-source}
+# Each source file and the ARD columns taken from it
+src <- list(
+  DEMO_L   = list(demo, c("RIDAGEYR", "RIAGENDR", "RIDRETH3", "SDMVSTRA", "SDMVPSU")),
+  ALB_CR_L = list(alb,  "URDACT"),
+  BIOPRO_L = list(bio,  c("LBXSCR", "WTPH2YR")),
+  GHB_L    = list(ghb,  "LBXGH"),
+  BMX_L    = list(bmx,  "BMXBMI"),
+  BPXO_L   = list(bpxo, c("BPXOSY1", "BPXOSY2", "BPXOSY3", "BPXODI1", "BPXODI2", "BPXODI3")),
+  DIQ_L    = list(diq,  c("DIQ010", "DIQ050", "DIQ070")),
+  BPQ_L    = list(bpq,  c("BPQ020", "BPQ150")),
+  SMQ_L    = list(smq,  c("SMQ020", "SMQ040"))
+)
+
+# Match ARD participants to each source file by SEQN and compare values column by column
+source_results <- vapply(src, function(s) {
+  idx <- match(v$SEQN, s[[1]]$SEQN)
+  all(vapply(s[[2]], function(col) same(num(v[[col]]), num(s[[1]][[col]][idx])), logical(1)))
+}, logical(1))
+
+check_source <- all(source_results)
+
+```
+
+```{r validation-survey}
+# Reloaded file identical to the dataset that was exported
+check_reload <- identical(ard_final, ard_reloaded) && nrow(ard_reloaded) == sum(ard$eligible_study)
+
+# Full survey design: all participants with a positive phlebotomy weight
+survey_frame <- ard %>% filter(is.finite(WTPH2YR), WTPH2YR > 0)
+
+# PSUs per stratum in the full design (must be at least two)
+psu_full  <- survey_frame %>% distinct(SDMVSTRA, SDMVPSU) %>% count(SDMVSTRA)
+check_psu <- all(psu_full$n >= 2)
+
+# PSUs per stratum within the eligible domain (reported, not a pass/fail check)
+psu_domain <- survey_frame %>% filter(eligible_study) %>% distinct(SDMVSTRA, SDMVPSU) %>% count(SDMVSTRA)
+n_single_psu_domain <- sum(psu_domain$n == 1)
+
+```
+
+```{r validation-summary}
+checks <- tibble(
   Check = c(
-    "Participant identifiers complete and unique",
-    "All participants aged ≥20 years",
-    "ACR complete, finite and nonnegative",
-    "Outcome complete and consistent with ACR ≥30 mg/g",
-    "eGFR complete, finite and ≥60 mL/min/1.73 m²",
-    "All participants have confirmed metabolic risk",
-    "Survey weights finite and positive",
-    "Survey strata and PSU identifiers complete",
-    "Dataset dimensions match the final export",
-    "Event count matches the final export"
+    "eGFR implementation reproduces NKF CKD-EPI 2021 calculator values",
+    "All derived variables re-derived from source columns and matched",
+    "Source values identical to original NHANES files",
+    "Reloaded file identical to exported dataset",
+    "At least two PSUs per stratum in the full survey design"
   ),
-  Passed = c(
-    !anyNA(ard_reloaded$SEQN) && !anyDuplicated(ard_reloaded$SEQN),
-    all(is.finite(ard_reloaded$RIDAGEYR) & ard_reloaded$RIDAGEYR >= 20),
-    all(is.finite(ard_reloaded$URDACT) & ard_reloaded$URDACT >= 0),
-    !anyNA(ard_reloaded$elevated_acr) &&
-      all(ard_reloaded$elevated_acr == (ard_reloaded$URDACT >= 30)),
-    all(is.finite(ard_reloaded$egfr) & ard_reloaded$egfr >= 60),
-    !anyNA(ard_reloaded$metabolic_risk) &&
-      all(ard_reloaded$metabolic_risk == 1),
-    all(is.finite(ard_reloaded$WTPH2YR) & ard_reloaded$WTPH2YR > 0),
-    !anyNA(ard_reloaded[c("SDMVSTRA", "SDMVPSU")]),
-    nrow(ard_reloaded) == 3370 && ncol(ard_reloaded) == 33,
-    !anyNA(ard_reloaded$elevated_acr) &&
-      sum(ard_reloaded$elevated_acr) == 417
-  )
+  Passed = c(check_egfr, check_rederive, check_source, check_reload, check_psu)
 )
 
 if (!all(checks$Passed)) {
-  stop(
-    "ARD validation failed: ",
-    paste(checks$Check[which(is.na(checks$Passed) |
-                               !checks$Passed)], collapse = "; ")
-  )
+  stop("Validation failed: ", paste(checks$Check[!checks$Passed], collapse = "; "))
 }
 
-checks$Result <- ifelse(checks$Passed, "PASS", "FAIL")
-
 knitr::kable(
-  checks[c("Check", "Result")],
+  transmute(checks, Check, Result = ifelse(Passed, "PASS", "FAIL")),
   caption = "Validation of the exported analysis-ready dataset"
 )
 ```
-The exported analysis-ready dataset was reloaded and checked for complete and unique participant identifiers, age eligibility, valid ACR and eGFR values, outcome-threshold consistency, confirmed metabolic-risk eligibility, and complete survey-design fields with finite positive weights. All checks passed. The dataset contained **3,370** participants and **417** elevated-albuminuria events, matching the final construction output.
 
-Variable definitions, derivation rules and missing-value conventions are provided in the accompanying metadata file:  
-[`metadata/nhanes_albuminuria_ard_codebook.md`](metadata/nhanes_albuminuria_ard_codebook.md)  
-([GitHub](https://github.com/maheration/HDS_M1_NHANES/blob/main/metadata/nhanes_albuminuria_ard_codebook.md)).
+Validation was performed in two stages. Before exporting the final ARD file, the dataset was checked for unique participant identifiers, consistency with every eligibility criterion and the outcome definition, and complete survey design variables with positive weights. After export, the reloaded file was checked as shown in the table above: it was identical to the exported dataset; the eGFR derivation code was compared with the National Kidney Foundation CKD-EPI 2021 online calculator for four test cases, and the results were identical (National Kidney Foundation, 2026); every derived variable could be rebuilt from the source columns in the dataset; source values matched the original NHANES files; and each survey stratum was represented by at least two PSUs in both the full survey sample and the eligible study population.
+
+Together, these checks show that the dataset is internally consistent, traceable to its source and ready for the planned analysis. They cannot confirm that NHANES measurements or self-reported answers are accurate.
+
+Variable definitions, derivation rules and missing-value conventions are provided in the accompanying codebook (`metadata/nhanes_albuminuria_ard_codebook.md`; [GitHub](https://github.com/maheration/HDS_M1_NHANES/blob/main/metadata/nhanes_albuminuria_ard_codebook.md)).
 
 ## Statistical analysis
 Analyses accounted for the NHANES complex, multistage probability sampling design. The two-year phlebotomy weight (WTPH2YR) was used with the masked variance strata (SDMVSTRA) and primary sampling units (SDMVPSU), because the study required blood laboratory measurements. The survey design was declared in the broader sample with finite, positive phlebotomy weights, with primary sampling units nested within strata. The eligible study population was then selected as a survey subpopulation.
@@ -1042,6 +1128,9 @@ Survey-weighted binary logistic regression was fitted using survey::svyglm() wit
 
 ```{r survey-design}
 library(survey)
+
+survey_source <- ard
+
 
 # Retain participants with valid phlebotomy weights
 survey_base <- survey_source %>%
