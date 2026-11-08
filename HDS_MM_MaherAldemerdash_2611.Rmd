@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup-packages, include=FALSE}
-pkgs <- c("haven", "dplyr", "survey", "gtsummary", "broom", "knitr")
+pkgs <- c("haven", "dplyr", "survey", "gtsummary", "broom", "knitr", "DT")
 
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {
@@ -888,16 +888,6 @@ The phlebotomy weight (WTPH2YR), masked variance stratum (SDMVSTRA) and primary 
 
 ### Analysis-ready dataset
 
-The analysis-ready dataset was constructed by retaining the 3,370 participants who met all study eligibility criteria. It contains:
-
-- the participant identifier and demographic characteristics,  
-- the primary albuminuria outcome and candidate regression variables,  
-- derived clinical and metabolic-risk indicators,  
-- the original measurements and questionnaire responses used to construct those indicators, and  
-- the NHANES survey design variables.
-
-The dataset was checked for participant-level uniqueness, eligibility consistency, outcome completeness and availability of survey design variables, then saved in RDS format for subsequent analyses.
-
 ```{r analysis-ready-dataset}
 ard_columns <- c(
   "SEQN", "RIDAGEYR", "RIAGENDR", "RIDRETH3",
@@ -938,27 +928,40 @@ stopifnot(
   !anyNA(ard_final$SDMVPSU)
 )
 
-tibble(
-  Participants = nrow(ard_final),
-  Variables = ncol(ard_final),
-  Unique_participants = n_distinct(ard_final$SEQN),
-  Elevated_albuminuria = sum(ard_final$elevated_acr)
-) %>%
-  knitr::kable(caption = "Final analysis-ready dataset summary")
+# Used in the DT caption
+n_ard_rows <- nrow(ard_final)
+n_ard_cols <- ncol(ard_final)
 ```
-```{r preview-ard, echo=FALSE, results='asis'}
-preview_table <- knitr::kable(
-  head(ard_final, 5),
-  format = "html",
-  caption = "Preview of the analysis-ready dataset (first 5 rows, all columns)",
-  row.names = FALSE,
-  table.attr = 'style="width: max-content; margin: 0;"'
-)
 
-cat(
-  '<div style="width: 100%; overflow-x: auto;">',
-  as.character(preview_table),
-  '</div>'
+The analysis-ready dataset was constructed by retaining the `r format(n_ard_rows, big.mark = ",")` participants who met all study eligibility criteria. It contains:
+
+- the participant identifier and demographic characteristics,  
+- the primary albuminuria outcome and candidate regression variables,  
+- derived clinical and metabolic-risk indicators,  
+- the original measurements and questionnaire responses used to construct those indicators, and  
+- the NHANES survey design variables.
+
+Intermediate calculation columns and source variables not used in derivation were excluded. The dataset was saved in RDS format (`data/processed/nhanes_albuminuria_ard.rds`).
+
+```{r preview-ard}
+htmltools::div(
+  style = "overflow-x: auto; width: 100%;",
+  DT::datatable(
+    ard_final,
+    rownames   = FALSE,
+    extensions = "Buttons",
+    class      = "display compact nowrap",
+    caption    = sprintf("Analysis-ready dataset (%s participants, %d variables). Use the buttons to download the full dataset.",
+                         format(n_ard_rows, big.mark = ","), n_ard_cols),
+    options = list(
+      dom        = "tipB",
+      buttons    = list(list(extend = "csv",   filename = "nhanes_albuminuria_ard"),
+                        list(extend = "excel", filename = "nhanes_albuminuria_ard")),
+      pageLength = 5,
+      autoWidth  = FALSE
+    )
+  ) %>%
+    DT::formatRound(columns = c("egfr", "mean_sbp", "mean_dbp"), digits = 1)
 )
 ```
 ```{r export-ards}
