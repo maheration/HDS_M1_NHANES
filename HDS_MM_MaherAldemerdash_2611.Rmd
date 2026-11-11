@@ -25,8 +25,8 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup-packages, include=FALSE}
-pkgs <- c("haven", "dplyr", "survey", "gtsummary", "broom", "knitr", "DT")
-
+pkgs <- c("haven", "dplyr", "tidyr", "tibble", "survey", "gtsummary",
+          "broom", "scales", "knitr", "DT", "htmltools")
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {
     install.packages(p)
