@@ -1,7 +1,7 @@
 # Variable Dictionary and Codebook
 
 **Analysis-ready dataset:** `nhanes_albuminuria_ard.rds`  
-**Version:** 1.0 (29 October 2026)  
+**Version:** 1.1 (11 November 2026)  
 **Rows × columns:** 3,370 × 33  
 
 ## Dataset description
@@ -27,9 +27,9 @@ DEMO_L, ALB_CR_L, BIOPRO_L, GHB_L, BMX_L, BPXO_L, DIQ_L, BPQ_L and SMQ_L.
 | RIAGENDR | numeric | Predictor | DEMO_L | Sex (1 = Male, 2 = Female) | — | 0 (0%) |
 | RIDRETH3 | numeric | Predictor | DEMO_L | Race/ethnicity (1 = Mexican American, 2 = Other Hispanic, 3 = Non-Hispanic White, 4 = Non-Hispanic Black, 6 = Non-Hispanic Asian, 7 = Other/Multi) | — | 0 (0%) |
 | URDACT | numeric | Outcome input | ALB_CR_L | Urine albumin/creatinine ratio | mg/g | 0 (0%) |
-| elevated_acr | logical | Outcome | Derived | TRUE if URDACT ≥ 30; FALSE otherwise | — | 0 (0%) |
+| elevated_acr | logical | Outcome | Derived from URDACT (ALB_CR_L) | TRUE if URDACT ≥ 30; FALSE otherwise | — | 0 (0%) |
 | LBXSCR | numeric | Eligibility | BIOPRO_L | Serum creatinine | mg/dL | 0 (0%) |
-| egfr | numeric | Eligibility | Derived (CKD-EPI 2021) | Estimated GFR (race-free). See notes. | mL/min/1.73 m² | 0 (0%); all ≥ 60 |
+| egfr | numeric | Eligibility | Derived (CKD-EPI 2021) from LBXSCR (BIOPRO_L), RIDAGEYR and RIAGENDR (DEMO_L) | Estimated GFR (race-free). See notes. | mL/min/1.73 m² | 0 (0%); all ≥ 60 |
 | LBXGH | numeric | Predictor | GHB_L | Glycohemoglobin (HbA1c) | % | 0 (0%) |
 | BPXOSY1 | numeric | Phenotype input | BPXO_L | Systolic BP, 1st reading | mmHg | 73 (2.2%) |
 | BPXOSY2 | numeric | Phenotype input | BPXO_L | Systolic BP, 2nd reading | mmHg | 76 (2.3%) |
@@ -37,8 +37,8 @@ DEMO_L, ALB_CR_L, BIOPRO_L, GHB_L, BMX_L, BPXO_L, DIQ_L, BPQ_L and SMQ_L.
 | BPXODI1 | numeric | Phenotype input | BPXO_L | Diastolic BP, 1st reading | mmHg | 73 (2.2%) |
 | BPXODI2 | numeric | Phenotype input | BPXO_L | Diastolic BP, 2nd reading | mmHg | 76 (2.3%) |
 | BPXODI3 | numeric | Phenotype input | BPXO_L | Diastolic BP, 3rd reading | mmHg | 85 (2.5%) |
-| mean_sbp | numeric | Predictor | Derived | Mean of available systolic readings (BPXOSY1–3). NA if none available. | mmHg | 73 (2.2%) |
-| mean_dbp | numeric | Predictor | Derived | Mean of available diastolic readings (BPXODI1–3). NA if none available. | mmHg | 73 (2.2%) |
+| mean_sbp | numeric | Predictor | Derived from BPXOSY1–3 (BPXO_L) | Mean of available systolic readings (BPXOSY1–3). NA if none available. | mmHg | 73 (2.2%) |
+| mean_dbp | numeric | Predictor | Derived from BPXODI1–3 (BPXO_L) | Mean of available diastolic readings (BPXODI1–3). NA if none available. | mmHg | 73 (2.2%) |
 | BMXBMI | numeric | Predictor | BMX_L | Body mass index | kg/m² | 23 (0.7%) |
 | DIQ010 | numeric | Phenotype input | DIQ_L | Doctor ever told diabetes (1 = Yes, 2 = No, 3 = Borderline) | — | 0 (0%) |
 | DIQ050 | numeric | Phenotype input | DIQ_L | Now taking insulin (1 = Yes, 2 = No) | — | 2,778 (82.4%) |
@@ -47,16 +47,28 @@ DEMO_L, ALB_CR_L, BIOPRO_L, GHB_L, BMX_L, BPXO_L, DIQ_L, BPQ_L and SMQ_L.
 | BPQ150 | numeric | Phenotype input | BPQ_L | Now taking prescribed medicine for high BP (1 = Yes, 2 = No) | — | 1,700 (50.4%) |
 | SMQ020 | numeric | Phenotype input | SMQ_L | Smoked ≥ 100 cigarettes in life (1 = Yes, 2 = No) | — | 0 (0%) |
 | SMQ040 | numeric | Phenotype input | SMQ_L | Now smoke cigarettes (1 = Every day, 2 = Some days, 3 = Not at all) | — | 1,885 (55.9%) |
-| smoking_status | factor | Predictor | Derived | Never / Former / Current. See notes. | — | 6 (0.2%) |
-| diabetes | numeric | Phenotype | Derived | 1 = present, 0 = absent. See notes. | — | 0 (0%) |
-| hypertension | numeric | Phenotype | Derived | 1 = present, 0 = absent, NA = indeterminate. See notes. | — | 30 (0.9%) |
-| obesity | numeric | Phenotype | Derived | 1 = present (BMI ≥ 30), 0 = absent, NA = indeterminate. See notes. | — | 23 (0.7%) |
-| metabolic_risk | numeric | Eligibility | Derived | 1 = ≥ 1 of diabetes, hypertension or obesity present. See notes. | — | 0 (0%); all = 1 |
+| smoking_status | factor | Predictor | Derived from SMQ020, SMQ040 (SMQ_L) | Never / Former / Current. See notes. | — | 6 (0.2%) |
+| diabetes | numeric | Phenotype | Derived from DIQ010, DIQ050, DIQ070 (DIQ_L) and LBXGH (GHB_L) | 1 = present, 0 = absent. See notes. | — | 0 (0%) |
+| hypertension | numeric | Phenotype | Derived from BPQ020, BPQ150 (BPQ_L) and mean_sbp, mean_dbp (BPXO_L) | 1 = present, 0 = absent, NA = indeterminate. See notes. | — | 30 (0.9%) |
+| obesity | numeric | Phenotype | Derived from BMXBMI (BMX_L) | 1 = present (BMI ≥ 30), 0 = absent, NA = indeterminate. See notes. | — | 23 (0.7%) |
+| metabolic_risk | numeric | Eligibility | Derived from diabetes, hypertension and obesity | 1 = ≥ 1 of diabetes, hypertension or obesity present. See notes. | — | 0 (0%); all = 1 |
 | WTPH2YR | numeric | Survey design | BIOPRO_L | Phlebotomy two-year sample weight | — | 0 (0%) |
 | SDMVSTRA | numeric | Survey design | DEMO_L | Masked variance pseudo-stratum | — | 0 (0%) |
 | SDMVPSU | numeric | Survey design | DEMO_L | Masked variance pseudo-PSU | — | 0 (0%) |
 
 ## Accompanying notes
+
+### Value conventions
+- `elevated_acr` is **logical** (TRUE/FALSE), created directly from the comparison URDACT ≥ 30.  
+- The phenotypes `diabetes`, `hypertension`, `obesity` and `metabolic_risk` are **numeric 1/0** (1 = present, 0 = absent), with NA marking indeterminate status.  
+- `smoking_status` is a **factor** with levels Never, Former and Current (reference: Never).  
+- Source NHANES variables keep their original numeric codes and units.
+
+### Missing values (NA)
+NA counts and percentages in the dictionary are among the 3,370 ARD participants. An NA has one of three meanings:  
+- **Planned questionnaire skip:** the item was not asked because of an earlier answer. This accounts for the large NA counts in DIQ050 (insulin; asked only after a diabetes diagnosis), DIQ070 (diabetes pills; asked after a diagnosis, borderline diabetes or prediabetes), BPQ150 (BP medication; not asked without a reported hypertension diagnosis) and SMQ040 (current smoking; asked only if SMQ020 = 1).  
+- **Measurement not obtained:** blood-pressure readings (BPXOSY1–3, BPXODI1–3) and BMI (BMXBMI) were not recorded at the examination.  
+- **Indeterminate derived value:** the rule for a derived variable could not be applied (see the phenotype and smoking notes below).
 
 ### Special response codes
 The following non-response codes are retained in the source columns and are **not** counted as NA:  
@@ -70,13 +82,15 @@ Observed in this dataset:
 - SMQ020 (smoked ≥ 100 cigarettes): 3 responses coded 7 and 3 coded 9  
 
 ### eGFR — CKD-EPI 2021 creatinine equation (race-free)
-Calculated from serum creatinine (LBXSCR, mg/dL), age (RIDAGEYR) and sex (RIAGENDR) for adults with non-missing values:
+Calculated (Inker et al., 2021) from serum creatinine (LBXSCR, mg/dL), age (RIDAGEYR, years) and sex (RIAGENDR) for adults aged ≥ 20 years with non-missing values:
 
-\[
-\text{eGFR} = 142 \times \min(\text{Scr}/\kappa, 1)^{\alpha} \times \max(\text{Scr}/\kappa, 1)^{-1.200} \times 0.9938^{\text{Age}} \times 1.012^{\text{[female]}}
-\]
+$$
+\text{eGFR} = 142 \times \min(\text{Scr}/\kappa, 1)^{\alpha} \times \max(\text{Scr}/\kappa, 1)^{-1.200} \times 0.9938^{\text{Age}} \times 1.012\ [\text{if female}]
+$$
 
-where \(\kappa = 0.7\) (female) or \(0.9\) (male), and \(\alpha = -0.241\) (female) or \(-0.302\) (male).
+where Scr is serum creatinine in mg/dL, κ = 0.7 (female) or 0.9 (male), and α = −0.241 (female) or −0.302 (male).  
+Plain-text form: eGFR = 142 × min(Scr/κ, 1)^α × max(Scr/κ, 1)^−1.200 × 0.9938^Age × 1.012 [if female].  
+Because age is top-coded at 80 in the public-use file, eGFR may be overestimated for participants aged over 80.
 
 ### Blood pressure
 - `mean_sbp` is the mean of all available systolic readings (BPXOSY1, BPXOSY2, BPXOSY3).  
@@ -114,8 +128,11 @@ All participants retained in this analysis-ready dataset meet the metabolic-risk
 ### Smoking status
 - Never: SMQ020 = 2  
 - Former: SMQ020 = 1 and SMQ040 = 3  
-- Current: SMQ020 = 1 and SMQ040 ∈ {1, 2}  
-- NA if the required responses are missing or inconsistent.
+- Current: SMQ020 = 1 and SMQ040 = 1 or 2 (every day or some days)  
+- NA otherwise, i.e. SMQ020 is refused (7), don't know (9) or missing, or SMQ020 = 1 without a valid SMQ040 response. In this dataset, all 6 NA values come from SMQ020 = 7 or 9.
+
+### Survey design
+WTPH2YR, SDMVSTRA and SDMVPSU are complete, with positive weights, for all ARD participants. The eligible-only ARD must be used with the supplied workflow, which reconstructs the broader phlebotomy-weighted survey design before selecting the eligible subpopulation. Declaring the design on the ARD alone would give incorrect variance estimates.
 
 ### Analysis-use note
 The primary analysis covariates are age, sex, race/ethnicity, HbA1c, mean systolic blood pressure, BMI and smoking status.  
