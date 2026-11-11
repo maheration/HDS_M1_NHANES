@@ -3,6 +3,9 @@ title: "Albuminuria among US adults with metabolic risk factors and preserved ki
 subtitle: "NHANES August 2021–August 2023"
 author: "Maher Aldemerdash"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
+bibliography: references.bib
+csl: vancouver.csl
+link-citations: true
 output:
   rmdformats::readthedown:
     highlight: tango
@@ -103,20 +106,20 @@ tibble(
 
 **Methods.** Nine NHANES August 2021–August 2023 public-use components were assessed for provenance, linkage, completeness and plausibility, then linked by participant identifier. Diabetes, hypertension and obesity phenotypes were derived from questionnaire, examination and laboratory data, with an explicit indeterminate category. Eligible participants were non-pregnant adults aged ≥20 years with eGFR ≥60 mL/min/1.73 m² (CKD-EPI 2021) and at least one confirmed metabolic risk factor; elevated albuminuria was defined as a urine albumin-to-creatinine ratio ≥30 mg/g. Validation re-derived every derived variable, reconciled source values with the original files and checked eGFR against an external calculator.
 
-**Results.** The ARD contains 3,370 participants and 33 variables, including survey design variables; all validation checks passed. The survey-weighted prevalence of elevated albuminuria was 10.9% (95% CI 10.0–12.0%). Among 3,270 complete-case participants (401 events), older age, higher HbA1c and higher systolic blood pressure were associated with elevated albuminuria.
+**Results.** The ARD contains 3,370 participants and 33 variables; all validation checks passed. The survey-weighted prevalence of elevated albuminuria was 10.9% (95% CI 10.0–12.0%). Among 3,270 complete-case participants (401 events), older age, higher HbA1c and higher systolic blood pressure were associated with elevated albuminuria.
 
 **Conclusions.** The ARD provides a reproducible, auditable basis for survey-weighted analysis of albuminuria in this population.
 
 # Introduction
-Elevated albuminuria (urine albumin-to-creatinine ratio [ACR] ≥30 mg/g) is a marker of kidney damage and predicts kidney disease progression, cardiovascular events and mortality (1, 2). It can occur before estimated glomerular filtration rate (eGFR) declines, making it relevant to risk assessment in adults with preserved filtration (1, 3).
+Elevated albuminuria (urine albumin-to-creatinine ratio [ACR] ≥30 mg/g) marks kidney damage, predicts kidney disease progression, cardiovascular events and mortality [@stevens_kdigo_2024; @writing_group_for_the_ckd_prognosis_consortium_estimated_2023], and can precede a decline in estimated glomerular filtration rate (eGFR) [@stevens_kdigo_2024; @gansevoort_lower_2011].
 
-Diabetes, hypertension and obesity identify a population at increased kidney risk (4, 5). Examining albuminuria within this population can help characterise kidney damage that an eGFR threshold alone would overlook. NHANES August 2021–August 2023 combines questionnaire, examination and laboratory data with a complex sampling design, allowing these associations to be examined in a population-based sample.
+Diabetes, hypertension and obesity identify adults at increased kidney risk [@american_diabetes_association_professional_practice_committee_11_2025; @claudel_assessment_2025]; in this group, albuminuria captures kidney damage that an eGFR threshold alone would miss. NHANES August 2021–August 2023 links questionnaire, examination and laboratory data within a complex probability sample, allowing population-level estimation.
 
 > **Clinical question**
 >
 > Among U.S. adults aged ≥20 years with at least one metabolic risk factor (diabetes, hypertension or obesity) and preserved eGFR (≥60 mL/min/1.73 m²), which clinical and metabolic characteristics are associated with elevated albuminuria (ACR ≥30 mg/g)?
 
-To address this question, we constructed a documented, validated analysis-ready dataset for survey-weighted logistic regression, linking source measurements and questionnaire responses with explicit phenotype definitions.
+This project built a documented, validated analysis-ready dataset (ARD) for survey-weighted logistic regression to address this question.
 
 # Methods
 
@@ -124,7 +127,7 @@ To address this question, we constructed a documented, validated analysis-ready 
 
 This cross-sectional study used the NHANES August 2021–August 2023 cycle, a multistage probability sample of the civilian non-institutionalised U.S. population. The unit of observation is the individual participant (one row per SEQN).
 
-Eligible participants were adults aged ≥20 years with measured urine ACR and serum creatinine, eGFR ≥60 mL/min/1.73 m² and at least one confirmed metabolic risk factor (diabetes, hypertension or obesity; Section 3.3). The age threshold follows previous NHANES studies of kidney disease (USRDS; Wang et al., 2020). The eGFR restriction allowed examination of albuminuria among adults with preserved filtration. Pregnancy alters glomerular filtration and albumin excretion, so confirmed pregnancy was excluded; participants with missing or unascertainable pregnancy status were retained. Participants with missing regression covariates remained in the ARD (see *Missing data*).
+Eligible participants were adults aged ≥20 years with measured urine ACR and serum creatinine, eGFR ≥60 mL/min/1.73 m² and at least one confirmed metabolic risk factor (diabetes, hypertension or obesity; Section 3.3). The age threshold follows previous NHANES studies of kidney disease [@kibria_prevalence_2020]. Pregnancy alters glomerular filtration and albumin excretion, so confirmed pregnancy was excluded; participants with missing or unascertainable pregnancy status were retained. Participants with missing regression covariates remained in the ARD (see *Missing data*).
 
 
 
@@ -381,13 +384,8 @@ stopifnot(
 
 ### Kidney function and albuminuria
 
-eGFR was calculated from serum creatinine (LBXSCR, mg/dL), age and sex using the race-free CKD-EPI 2021 creatinine equation (Inker et al., 2021):
+eGFR was calculated from serum creatinine (LBXSCR, mg/dL), age and sex using the race-free CKD-EPI 2021 creatinine equation [@inker_new_2021] (equation in the codebook). ACR (URDACT, mg/g) was retained as continuous, with elevated albuminuria defined as ≥30 mg/g.
 
-\[
-\text{eGFR} = 142 \times \min(\text{Scr}/\kappa, 1)^{\alpha} \times \max(\text{Scr}/\kappa, 1)^{-1.200} \times 0.9938^{\text{Age}} \times 1.012^{\text{[female]}}
-\]
-
-where \(\kappa = 0.7\) and \(\alpha = -0.241\) for females, and \(\kappa = 0.9\) and \(\alpha = -0.302\) for males. ACR (URDACT, mg/g) was retained as continuous, with elevated albuminuria defined as ≥30 mg/g.
 
 ```{r derive-egfr, include=FALSE}
 ard <- ard %>%
@@ -432,7 +430,6 @@ knitr::kable(
   caption = "Kidney function and albuminuria: availability and distribution after derivation"
 )
 ```
-Among `r format(kidney_check$n_adults, big.mark = ",")` adults, serum creatinine was available for `r format(kidney_check$n_with_creatinine, big.mark = ",")`, all of whom had eGFR calculated. Median eGFR was `r round(kidney_check$egfr_median, 1)` mL/min/1.73 m² (range `r round(kidney_check$egfr_min, 1)`–`r round(kidney_check$egfr_max, 1)`). Urine ACR was available for `r format(kidney_check$n_with_acr, big.mark = ",")` adults, and both measurements for `r format(kidney_check$n_with_both, big.mark = ",")`.
 
 ### Mean blood pressure
 
@@ -500,7 +497,7 @@ bp_reading_counts %>%
     )
   )
 ```
-Of `r format(bp_summary$n_adults, big.mark = ",")` adults, `r format(bp_summary$n_with_sbp, big.mark = ",")` (`r round(100 * bp_summary$n_with_sbp / bp_summary$n_adults, 1)`%) had mean systolic and diastolic pressures: `r format(n_bp3, big.mark = ",")` from three readings, `r n_bp2` from two and `r n_bp1` from one. Median systolic pressure was `r round(bp_summary$sbp_median, 1)` mmHg (range `r round(bp_summary$sbp_min, 1)`–`r round(bp_summary$sbp_max, 1)`) and diastolic `r round(bp_summary$dbp_median, 1)` mmHg (`r round(bp_summary$dbp_min, 1)`–`r round(bp_summary$dbp_max, 1)`). Extreme means were retained: excluding them would remove participants with severe hypertension, who are central to the question.
+Among adults with calculated means, `r format(n_bp3, big.mark = ",")` had three readings, `r n_bp2` two and `r n_bp1` one. Extreme means were retained, because excluding them would remove participants with severe hypertension.
 
 ### Diabetes
 
@@ -558,7 +555,7 @@ Hypertension was classified as **absent** only when both of the following held:
 - mean systolic and diastolic blood pressure both measured and < 130/80 mmHg.
 
 When a participant reported no diagnosis, the medication item was not asked; the resulting structural missingness was treated as non-informative. In all other cases hypertension status was left **indeterminate**.
-The blood-pressure thresholds follow the 2017 ACC/AHA guideline definition of hypertension (≥130/80 mmHg; Whelton et al., 2018).
+The blood-pressure thresholds follow the 2017 ACC/AHA guideline definition of hypertension (≥130/80 mmHg) [@whelton_2017_2018].
 
 
 ```{r htn-derive}
@@ -585,11 +582,11 @@ ard <- ard %>%
 
 ### Obesity
 
-Obesity was classified as **present** if body mass index (BMI) was ≥ 30 kg/m² (BMXBMI).  
+Obesity was classified from body mass index (BMI; BMXBMI) as:
 
-Obesity was classified as **absent** if BMI was below 30 kg/m².  
-
-Participants without a valid BMI measurement were classified as **indeterminate**. 
+- **Present** — BMI ≥30 kg/m².
+- **Absent** — BMI <30 kg/m².
+- **Indeterminate** — BMI missing.
 
 
 ```{r obesity-derive}
@@ -658,7 +655,8 @@ ind_dm <- ard %>% filter(RIDAGEYR >= 20, is.na(diabetes))
 n_ind_dm     <- nrow(ind_dm)
 n_ind_dm_nox <- sum(ind_dm$SEQN %in% not_examined_ids)
 ```
-Most indeterminate diabetes classifications arose because absence required a measured HbA1c: `r format(n_ind_dm_nox, big.mark = ",")` of `r format(n_ind_dm, big.mark = ",")` adults with indeterminate status (`r round(100 * n_ind_dm_nox / n_ind_dm)`%) were interviewed but did not attend the mobile examination centre, so no blood was drawn and HbA1c was unavailable. The combined indicator had fewer indeterminate cases because one present phenotype, including a self-reported diagnosis, was sufficient.
+
+Among adults with indeterminate diabetes status, 1,514 of 1,762 (86%) had not attended the examination centre and lacked HbA1c required to establish absence. Combined metabolic risk was less often indeterminate because any confirmed phenotype sufficed.
 
 
 ### Demographic and continuous covariates
@@ -698,7 +696,9 @@ smoking_summary <- ard %>%
   )
 
 ```
-Of 7,809 adults, 4,547 (58.2%) were classified as never, 2,050 (26.3%) former and 1,183 (15.1%) current smokers; status was missing for 29 (0.4%) whose responses were insufficient for classification.
+
+Of `r format(sum(smoking_summary$N), big.mark = ",")` adults, `r format(smoking_summary$N[smoking_summary$smoking_status %in% "Never"], big.mark = ",")` (`r smoking_summary$pct[smoking_summary$smoking_status %in% "Never"]`%) were never, `r format(smoking_summary$N[smoking_summary$smoking_status %in% "Former"], big.mark = ",")` (`r smoking_summary$pct[smoking_summary$smoking_status %in% "Former"]`%) former and `r format(smoking_summary$N[smoking_summary$smoking_status %in% "Current"], big.mark = ",")` (`r smoking_summary$pct[smoking_summary$smoking_status %in% "Current"]`%) current smokers; `r smoking_summary$N[is.na(smoking_summary$smoking_status)]` (`r smoking_summary$pct[is.na(smoking_summary$smoking_status)]`%) could not be classified.
+
 
 ### Eligibility criteria and creation of the analysis-ready dataset
 Eligibility criteria were applied sequentially; participants remaining and excluded at each step are shown below.
@@ -843,17 +843,17 @@ n_ard_rows <- nrow(ard_final)
 n_ard_cols <- ncol(ard_final)
 ```
 
-The analysis-ready dataset was constructed by retaining the `r format(n_ard_rows, big.mark = ",")` participants who met all eligibility criteria. It contains:
+The ARD contains the `r format(n_ard_rows, big.mark = ",")` eligible participants and `r n_ard_cols` variables:
 
-- the participant identifier and demographic characteristics,
-- the primary albuminuria outcome and candidate regression variables,
-- derived clinical and metabolic-risk indicators,
-- the source measurements and questionnaire responses used to derive those indicators, and
-- the NHANES survey design variables.
+- identifiers and demographic characteristics,
+- the outcome and regression covariates,
+- derived phenotypes and the source variables used to derive them, and
+- survey design variables.
 
-Intermediate calculation columns and unused source variables were excluded; the dataset was saved in RDS format (`data/processed/nhanes_albuminuria_ard.rds`).
+Intermediate and unused columns were excluded; the dataset was saved as `data/processed/nhanes_albuminuria_ard.rds`.
 
-```{r preview-ard}
+
+```{r preview-ard, include=FALSE}
 htmltools::div(
   style = "overflow-x: auto; width: 100%;",
   DT::datatable(
@@ -1023,7 +1023,7 @@ knitr::kable(
 )
 ```
 
-Validation was performed in two stages. Before the ARD file export, checks confirmed unique participant identifiers, consistency with the eligibility criteria and outcome definition, and complete survey design variables with positive weights. After export, all of the following checks passed: the reloaded file was identical to the exported dataset; an independent implementation of the CKD-EPI 2021 equation matched the National Kidney Foundation calculator for four test cases (National Kidney Foundation, 2026), and the stored eGFR matched that implementation; every derived variable was rebuilt from the source columns in the dataset; source values matched the original NHANES files; and every stratum had at least two PSUs in the full survey design, as did every stratum represented in the eligible domain.
+Validation was performed in two stages. Before the ARD file export, checks confirmed unique participant identifiers, consistency with the eligibility criteria and outcome definition, and complete survey design variables with positive weights. After export, all of the following checks passed: the reloaded file was identical to the exported dataset; an independent implementation of the CKD-EPI 2021 equation matched the National Kidney Foundation calculator for four test cases [@national_kidney_foundation_ckd-epi_nodate], and the stored eGFR matched that implementation; every derived variable was rebuilt from the source columns in the dataset; source values matched the original NHANES files; and every stratum had at least two PSUs in the full survey design, as did every stratum represented in the eligible domain.
 
 These checks support internal consistency, source traceability and readiness for the planned analysis, but cannot establish measurement or self-report accuracy.
 
@@ -1031,9 +1031,9 @@ Variable definitions, derivation rules and missing-value conventions are documen
 
 ## Statistical analysis
 
-Analyses accounted for NHANES complex sampling using phlebotomy weights (WTPH2YR), strata (SDMVSTRA) and PSUs (SDMVPSU). Phlebotomy weights were chosen because blood measurements were required. The design was declared among participants with finite, positive weights, with PSUs nested within strata. Eligible participants were then selected as a survey subpopulation to obtain correct variance estimates, as recommended by NHANES (National Center for Health Statistics, n.d.).
+Analyses accounted for NHANES complex sampling using phlebotomy weights, strata and PSUs. Phlebotomy weights were chosen because blood measurements were required. The design was declared among participants with finite, positive weights, with PSUs nested within strata. Eligible participants were then selected as a survey subpopulation to obtain correct variance estimates, as recommended by NHANES [@national_center_for_health_statistics_nhanes_nodate].
 
-Descriptive summaries used available observations: survey-weighted means and standard deviations for continuous variables, weighted percentages for categorical variables, and unweighted sample sizes. Elevated albuminuria prevalence was estimated with a logit-transformed 95% confidence interval. Comparisons by albuminuria status used design-based t-tests and Rao–Scott adjusted Pearson's χ² tests for continuous and categorical variables, respectively.
+Descriptive summaries used available observations: survey-weighted means and standard deviations for continuous variables, weighted percentages for categorical variables, and unweighted sample sizes. Elevated albuminuria prevalence was estimated with a logit-transformed 95% confidence interval. 
 
 Survey-weighted logistic regression used `survey::svyglm()` with a quasibinomial family, restricted to complete cases selected within the survey design. Prespecified predictors were age (per 10 years), sex, race/ethnicity, HbA1c (per percentage point), mean systolic blood pressure (per 10 mmHg), BMI (per 5 kg/m²) and smoking status. Reference categories were male, non-Hispanic White and never smoker. Model checks assessed events per predictor parameter and added quadratic terms separately for each continuous predictor to explore nonlinearity.
 
@@ -1364,7 +1364,7 @@ There were 33.4 events per estimated predictor parameter; exploratory tests foun
 
 # Discussion
 
-This project produced a documented, validated ARD for survey-weighted analysis of albuminuria among U.S. adults with metabolic risk factors and preserved eGFR. The illustrative model identified associations with age, HbA1c and systolic blood pressure consistent with previous studies (Bryson et al., 2006; Nam et al., 2013).
+This project produced a documented, validated ARD for the planned survey-weighted analysis. The illustrative model identified associations with age, HbA1c and systolic blood pressure consistent with previous studies [@bryson_racial_2006; @nam_prevalence_2014].
 Phenotypes combined self-reported diagnoses, medication use and measurements, and therefore depend on source accuracy and completeness; self-reports and single-examination measurements may misclassify phenotypes. Interpreting questionnaire routing allowed planned skips to be distinguished from unanswered questions, and an explicit indeterminate category preserved uncertainty rather than forcing classification. Requiring confirmed metabolic risk may nevertheless exclude participants with unrecognised or incompletely measured disease.
 
 Retaining participants with missing covariates separated eligibility from model-specific exclusions and keeps the ARD usable for descriptive and alternative analyses. Complete-case regression excluded 3% of participants, which does not rule out selection bias; multiple imputation could be explored in sensitivity analysis. Because valid survey variance estimation requires the design to be declared before the eligible domain is selected, the supplied workflow reconstructs the full survey design from the public NHANES files; both the ARD and the analysis are therefore reproducible end to end.
