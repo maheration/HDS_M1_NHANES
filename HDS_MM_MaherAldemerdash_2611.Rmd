@@ -1027,7 +1027,7 @@ Validation was performed in two stages. Before the ARD file export, checks confi
 
 These checks support internal consistency, source traceability and readiness for the planned analysis, but cannot establish measurement or self-report accuracy.
 
-Variable definitions, derivation rules and missing-value conventions are documented in the accompanying codebook (`metadata/nhanes_albuminuria_ard_codebook.md`; [GitHub](https://github.com/maheration/HDS_M1_NHANES/blob/main/metadata/nhanes_albuminuria_ard_codebook.md)).
+Variable definitions, derivation rules and missing-value conventions are documented in the accompanying codebook (`metadata/codebook_metadata.md`; [GitHub](https://github.com/maheration/HDS_M1_NHANES/blob/main/metadata/codebook_metadata.md)).
 
 ## Statistical analysis
 
