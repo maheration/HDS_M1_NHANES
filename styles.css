@@ -71,7 +71,6 @@
 /* ----------------------------------------------------------
    5. Sidebar navigation
    ---------------------------------------------------------- */
-
 #sidebar #toc a {
   color: var(--white) !important;
 }
@@ -80,6 +79,11 @@
   color: #BBDDF2 !important;
 }
 
+/* Dark text on the theme's existing white/grey backgrounds */
+#sidebar #toc li.active a,
+#sidebar #toc li.current a {
+  color: var(--navy) !important;
+}
 
 /* ----------------------------------------------------------
    6. Tables

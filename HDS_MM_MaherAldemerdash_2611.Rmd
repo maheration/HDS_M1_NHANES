@@ -1204,7 +1204,7 @@ design_full <- svydesign(
   strata  = ~SDMVSTRA,
   weights = ~WTPH2YR,
   data    = survey_base,
-  # Treat PSU codes as belonging to their own stratum.
+  # PSU numbers repeat across strata, so identify each PSU by its stratum and number.
   nest    = TRUE
 )
 
