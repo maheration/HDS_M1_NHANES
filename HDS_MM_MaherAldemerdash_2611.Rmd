@@ -16,6 +16,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
+  # Suppress routine messages and warnings in the report and standardise plot sizes.
   echo = FALSE,
   message = FALSE,
   warning = FALSE,
@@ -25,8 +26,11 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup-packages, include=FALSE}
+# Make the packages needed for data preparation, analysis and reporting available.
 pkgs <- c("haven", "dplyr", "tidyr", "tibble", "survey", "gtsummary",
           "broom", "scales", "knitr", "DT", "htmltools")
+
+# Install only missing packages, preserving versions already installed.
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {
     install.packages(p)
@@ -46,8 +50,10 @@ library(knitr)
 
 
 ```{r download-raw-datasets, include=FALSE}
+# Keep source files separate from processed data.
 dir.create("data/raw", recursive = TRUE, showWarnings = FALSE)
 
+# Nine raw files needed for this project
 files <- c(
   "DEMO_L.XPT",
   "ALB_CR_L.XPT",
@@ -60,8 +66,10 @@ files <- c(
   "SMQ_L.XPT"
 )
 
+# CDC repository for the NHANES August 2021–August 2023 cycle.
 base_url <- "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/"
 
+# Download only files not already saved locally to avoid repeated downloads.
 for (f in files) {
   dest <- file.path("data/raw", f)
   if (!file.exists(dest)) {
@@ -80,6 +88,8 @@ list.files("data/raw")
 ```
 
 ```{r load-raw-datasets, include=FALSE}
+
+# Load the nine NHANES datasets.
 demo  <- read_xpt("data/raw/DEMO_L.XPT")
 alb   <- read_xpt("data/raw/ALB_CR_L.XPT")
 bio   <- read_xpt("data/raw/BIOPRO_L.XPT")
@@ -90,6 +100,7 @@ diq   <- read_xpt("data/raw/DIQ_L.XPT")
 bpq   <- read_xpt("data/raw/BPQ_L.XPT")
 smq   <- read_xpt("data/raw/SMQ_L.XPT")
 
+# Check the number of rows and columns in each dataset.
 tibble(
   file   = c("DEMO_L", "ALB_CR_L", "BIOPRO_L", "GHB_L", "BMX_L",
              "BPXO_L", "DIQ_L", "BPQ_L", "SMQ_L"),
@@ -135,6 +146,8 @@ Eligible participants were adults aged ≥20 years with measured urine ACR and s
 Nine public-use NHANES August 2021–August 2023 component files were obtained from the CDC repository and imported using haven::read_xpt(); the variables taken from each are listed in the data dictionary.
 
 ```{r source-files-structure, echo=FALSE, include=FALSE}
+
+# Group the nine datasets to run the same checks on each.
 source_components <- list(
   DEMO_L = demo,
   ALB_CR_L = alb,
@@ -147,6 +160,7 @@ source_components <- list(
   SMQ_L = smq
 )
 
+# State what each dataset contributes to the study.
 source_roles <- c(
   "Demographics, pregnancy and survey design",
   "Urine albumin-to-creatinine ratio",
@@ -159,7 +173,7 @@ source_roles <- c(
   "Lifetime and current smoking"
 )
 
-# File overview: all records as supplied
+# Summarise each dataset before excluding any participants.
 source_overview <- tibble::tibble(
   Component = names(source_components),
   Purpose = source_roles,
@@ -167,7 +181,8 @@ source_overview <- tibble::tibble(
   Columns = vapply(source_components, ncol, integer(1))
 )
 
-# Identifier and linkage checks: retained for reporting in prose
+# Check for missing or repeated participant IDs in each dataset.
+# Also check that all IDs appear in the demographics dataset before merging.
 source_id_checks <- dplyr::bind_rows(
   lapply(names(source_components), function(component) {
     x <- source_components[[component]]
@@ -183,12 +198,14 @@ source_id_checks <- dplyr::bind_rows(
   })
 )
 
+# Stop if any ID is missing, repeated or absent from the demographics dataset.
 stopifnot(
   all(source_id_checks$Missing_ID == 0),
   all(source_id_checks$Duplicate_ID == 0),
   all(source_id_checks$Unmatched_ID == 0)
 )
 
+# Dataset overview table.
 knitr::kable(
   source_overview,
   col.names = c(
@@ -206,10 +223,11 @@ knitr::kable(
 Participant identifiers (SEQN) were complete and unique in every file, and every record in the eight non-demographic components matched DEMO_L, supporting one-to-one linkage. Missingness was calculated within each full component before eligibility restrictions.
 
 ```{r source-variable-quality, echo=FALSE}
-# Missingness and distribution of selected variables in each full source component
+# Check missing values and measurement ranges before selecting the study population.
 source_quality_row <- function(data, source, variable, label, units = NA,
                                questionnaire = FALSE, digits = 1) {
 
+  # Stop if the requested variable is not in the dataset.
   stopifnot(variable %in% names(data))
 
   x <- data[[variable]]
@@ -221,6 +239,7 @@ source_quality_row <- function(data, source, variable, label, units = NA,
     var_label <- paste0(label, " (", variable, ")")
   } else {
     obs <- x[!is.na(x)]
+    # Stop if there are no observed measurements or any are infinite.
     stopifnot(length(obs) > 0, all(is.finite(obs)))
     fmt <- function(v) formatC(v, format = "f", digits = digits, big.mark = ",")
     min_x <- fmt(min(obs))
@@ -229,6 +248,8 @@ source_quality_row <- function(data, source, variable, label, units = NA,
     var_label <- paste0(label, ", ", units, " (", variable, ")")
   }
 
+  # Calculate missingness using everyone in the source dataset.
+  # Count refused and don't-know answers (7 and 9) separately from NA.
   tibble::tibble(
     Variable = var_label,
     Source = source,
@@ -242,6 +263,7 @@ source_quality_row <- function(data, source, variable, label, units = NA,
   )
 }
 
+# Apply these checks to the measurements and questionnaire items used in the study.
 source_quality <- dplyr::bind_rows(
   source_quality_row(alb,  "ALB_CR_L", "URDACT",  "Urine ACR",        "mg/g",  digits = 2),
   source_quality_row(bio,  "BIOPRO_L", "LBXSCR",  "Serum creatinine", "mg/dL", digits = 2),
@@ -283,26 +305,29 @@ knitr::kable(
 Missing medication and smoking responses cannot be read as non-response alone, because question eligibility and planned skips also produce missing values; these items were therefore interpreted alongside their screening questions (Section 3.3). Age, sex and race/ethnicity were complete.
 
 ```{r extreme-values-check, include=FALSE}
-# Who holds the extreme values in each source measurement?
-# Supports the range-check paragraph; view in the console with: extreme_ages
+# Check the ages of participants with the lowest and highest measurements.
+# Also check the lowest adult values, since children are not eligible for this study.
 extreme_age_row <- function(data, variable) {
   d <- data %>%
     dplyr::select(SEQN, value = dplyr::all_of(variable)) %>%
     dplyr::filter(!is.na(value)) %>%
     dplyr::left_join(demo %>% dplyr::select(SEQN, RIDAGEYR), by = "SEQN")
 
+  # Stop if any participant's age is missing after linking to demographics.
   stopifnot(!anyNA(d$RIDAGEYR))
 
   tibble::tibble(
     Variable  = variable,
     Min       = min(d$value),
     Min_age   = paste(sort(unique(d$RIDAGEYR[d$value == min(d$value)])), collapse = ", "),
-    Adult_min = min(d$value[d$RIDAGEYR >= 20]),   # lowest value among adults
+    # lowest value among adults
+    Adult_min = min(d$value[d$RIDAGEYR >= 20]),   
     Max       = max(d$value),
     Max_age   = paste(sort(unique(d$RIDAGEYR[d$value == max(d$value)])), collapse = ", ")
   )
 }
 
+# Repeat for each measurement to help assess whether extreme values are plausible.
 extreme_ages <- dplyr::bind_rows(
   extreme_age_row(alb,  "URDACT"),
   extreme_age_row(bio,  "LBXSCR"),
@@ -326,7 +351,7 @@ All variables were derived for the full linked dataset of `r format(nrow(demo), 
 Component files were left-joined to DEMO_L by SEQN, retaining all participants. Post-join checks confirmed that identifiers and the record count were unchanged; values were set to missing (NA) where a participant had no record in a component.
 
 ```{r merge-nhanes-component, include=FALSE}
-# Confirm uniqueness of SEQN in each source file before joining
+# Check that each participant appears only once in each dataset before merging.
 source_files <- list(
   DEMO_L = demo, ALB_CR_L = alb, BIOPRO_L = bio, GHB_L = ghb,
   BMX_L = bmx, BPXO_L = bpxo, DIQ_L = diq, BPQ_L = bpq, SMQ_L = smq
@@ -342,7 +367,8 @@ uniqueness_check <- bind_rows(lapply(names(source_files), function(nm) {
   )
 }))
 
-# Merge, retaining only the variables required for subsequent derivation
+# Match datasets by participant ID (SEQN), keeping the variables needed below.
+# Keep everyone in demographics; missing matches receive NA.
 ard <- demo %>%
   select(SEQN, RIDAGEYR, RIAGENDR, RIDRETH3, RIDEXPRG,
        SDMVSTRA, SDMVPSU, WTINT2YR, WTMEC2YR) %>%
@@ -357,6 +383,7 @@ ard <- demo %>%
   left_join(bpq  %>% select(SEQN, BPQ020, BPQ030, BPQ150), by = "SEQN") %>%
   left_join(smq  %>% select(SEQN, SMQ020, SMQ040), by = "SEQN")
 
+# Compare participant counts before and after merging to check for added or repeated rows.
 merge_check <- tibble(
   Measure = c("Rows in demographic file",
               "Rows after joins",
@@ -373,6 +400,8 @@ knitr::kable(uniqueness_check,
 knitr::kable(merge_check,
              caption = "Row count and participant uniqueness after linkage")
 
+# Stop if merging changes the participant count or IDs,
+# or leaves any missing or repeated IDs.
 stopifnot(
   nrow(ard) == nrow(demo),
   !anyNA(ard$SEQN),
@@ -388,12 +417,18 @@ eGFR was calculated from serum creatinine (LBXSCR, mg/dL), age and sex using the
 
 
 ```{r derive-egfr, include=FALSE}
+# RIDAGEYR = age in years; RIAGENDR = sex (1 = male, 2 = female).
+# LBXSCR = serum creatinine (mg/dL); URDACT = urine ACR (mg/g).
+
 ard <- ard %>%
   mutate(
-    # CKD-EPI 2021 creatinine equation (adults only)
+    # Set the sex-specific constants for the CKD-EPI 2021 equation.
+    # NHANES codes sex as 1 = male and 2 = female.
     kappa = if_else(RIAGENDR == 2, 0.7, 0.9),
     alpha = if_else(RIAGENDR == 2, -0.241, -0.302),
     female_factor = if_else(RIAGENDR == 2, 1.012, 1),
+    # Calculate eGFR for adults aged 20 or older with positive creatinine and known sex.
+    # Leave eGFR missing when these conditions are not met.
     egfr = if_else(
       RIDAGEYR >= 20 &
         !is.na(LBXSCR) & LBXSCR > 0 &
@@ -405,10 +440,12 @@ ard <- ard %>%
         female_factor,
       NA_real_
     ),
-    # Elevated albuminuria
+    # Define elevated albuminuria as ACR >= 30 mg/g; keep missing ACR as NA.
+    # elevated_acr: TRUE = ACR >= 30 mg/g, FALSE = below 30, NA = missing.
     elevated_acr = if_else(!is.na(URDACT), URDACT >= 30, NA)
   )
-
+# Summarise available kidney measurements and eGFR values among adults.
+# Count how many have eGFR below 60, elevated ACR, or both ACR and creatinine measured.
 kidney_check <- ard %>%
   filter(RIDAGEYR >= 20) %>%
   summarise(
@@ -436,8 +473,13 @@ knitr::kable(
 Blood pressure followed the NHANES oscillometric protocol: up to three readings, about 60 seconds apart, taken with an automated upper-arm device after five minutes of seated rest. Mean systolic and diastolic pressures were calculated separately from all available readings, including the first, and set to missing when none was available.
 
 ```{r derive-bp-measure, include=FALSE}
+# BPXOSY1–3 = systolic BP readings; BPXODI1–3 = diastolic BP readings (mmHg).
+
+
 ard <- ard %>%
   mutate(
+    # Average the available readings for each participant, separately for systolic and       diastolic BP.
+    # Use one or two readings when all three are not available.
     mean_sbp = rowMeans(
       pick(BPXOSY1, BPXOSY2, BPXOSY3),
       na.rm = TRUE
@@ -446,6 +488,7 @@ ard <- ard %>%
       pick(BPXODI1, BPXODI2, BPXODI3),
       na.rm = TRUE
     ),
+    # When all readings are missing, replace the NaN result with NA.
     mean_sbp = if_else(is.nan(mean_sbp), NA_real_, mean_sbp),
     mean_dbp = if_else(is.nan(mean_dbp), NA_real_, mean_dbp)
   )
@@ -470,7 +513,9 @@ knitr::kable(
   caption = "Availability and distribution of mean blood-pressure measurements among adults"
 )
 ```
+
 ```{r bp-reading-counts, include=FALSE}
+# Count available systolic and diastolic readings for each adult.
 bp_reading_counts <- ard %>%
   filter(RIDAGEYR >= 20) %>%
   mutate(
@@ -478,13 +523,17 @@ bp_reading_counts <- ard %>%
     n_dbp = rowSums(!is.na(pick(BPXODI1, BPXODI2, BPXODI3)))
   )
 
-# Confirm equal numbers of systolic and diastolic readings
+# Check that each adult has the same number of systolic and diastolic readings
+# before using the systolic count to report both.
 stopifnot(all(bp_reading_counts$n_sbp == bp_reading_counts$n_dbp))
 
+# Calculate the counts used in the report text directly from the data.
 n_bp3 <- sum(bp_reading_counts$n_sbp == 3)
 n_bp2 <- sum(bp_reading_counts$n_sbp == 2)
 n_bp1 <- sum(bp_reading_counts$n_sbp == 1)
 
+# Show how many adults had one, two or three readings.
+# Exclude those with no readings because their mean BP could not be calculated.
 bp_reading_counts %>%
   filter(n_sbp > 0) %>%
   count(Readings = n_sbp, name = "N") %>%
@@ -517,21 +566,28 @@ Insulin use was asked only of participants reporting diagnosed diabetes, and pil
 
 
 ```{r dm-derive}
+# DIQ010 (diabetes diagnosis): 1 = yes, 2 = no, 3 = borderline.
+# DIQ050 (insulin) and DIQ070 (diabetes pills): 1 = yes, 2 = no.
+# All three questions: 7 = refused, 9 = don't know; NA = missing.
+# LBXGH = HbA1c (%).
+
 ard <- ard %>%
   mutate(
     diabetes = case_when(
-  # Present
+  # Any positive evidence counts as diabetes, even if other answers are missing.
+  # Check this first so it takes priority over the rules for absence.
   DIQ010 == 1 | LBXGH >= 6.5 | DIQ050 == 1 | DIQ070 == 1 ~ 1,
 
-  # Absent: clear negative self-report + measured HbA1c < 6.5
+  # Classify as absent when no diagnosis is reported and measured HbA1c is below 6.5%.
   DIQ010 == 2 & !is.na(LBXGH) & LBXGH < 6.5 ~ 0,
 
-  # Absent: borderline self-report, no diabetes medication, measured HbA1c < 6.5
+  # Borderline diabetes: classify as absent when HbA1c is below 6.5%
+  # and neither insulin nor diabetes pill use is reported as yes.
   DIQ010 == 3 & !is.na(LBXGH) & LBXGH < 6.5 &
     (is.na(DIQ050) | DIQ050 != 1) &
     (is.na(DIQ070) | DIQ070 != 1) ~ 0,
 
-  # Indeterminate
+  # Leave all other cases indeterminate rather than assuming diabetes is absent.
   TRUE ~ NA_real_
 )
   )
@@ -559,21 +615,29 @@ The blood-pressure thresholds follow the 2017 ACC/AHA guideline definition of hy
 
 
 ```{r htn-derive}
+# BPQ020 = hypertension diagnosis; BPQ150 = current blood-pressure medication.
+# Both: 1 = yes, 2 = no, 7 = refused, 9 = don't know; NA = missing.
+# mean_sbp and mean_dbp = mean systolic and diastolic BP (mmHg).
+# hypertension: 1 = present, 0 = absent, NA = indeterminate.
 
 ard <- ard %>%
   mutate(
     hypertension = case_when(
+      # Classify as present if diagnosis, medication use or raised BP indicates                hypertension.
       BPQ020 == 1 |
         BPQ150 == 1 |
         mean_sbp >= 130 |
         mean_dbp >= 80 ~ 1,
 
+      # Classify as absent only when no diagnosis is reported
+      # and both BP measurements are available and below 130/80.
       BPQ020 == 2 &
         !is.na(mean_sbp) &
         !is.na(mean_dbp) &
         mean_sbp < 130 &
         mean_dbp < 80 ~ 0,
 
+      # Leave all other cases indeterminate rather than assuming hypertension is absent.
       TRUE ~ NA_real_
     )
   )
@@ -590,9 +654,13 @@ Obesity was classified from body mass index (BMI; BMXBMI) as:
 
 
 ```{r obesity-derive}
+# BMXBMI = body mass index (kg/m²).
+# obesity: 1 = present, 0 = absent, NA = indeterminate.
+
 ard <- ard %>%
   mutate(
     obesity = case_when(
+      # Classify obesity using BMI >= 30; keep missing BMI as indeterminate.
       !is.na(BMXBMI) & BMXBMI >= 30 ~ 1,
       !is.na(BMXBMI) & BMXBMI < 30 ~ 0,
       TRUE ~ NA_real_
@@ -608,14 +676,22 @@ The three phenotypes were combined into a single indicator (`metabolic_risk`): *
 
 
 ```{r metabolic-risk-derive}
+# metabolic_risk: 1 = present, 0 = absent, NA = indeterminate.
+
 ard <- ard %>%
   mutate(
     metabolic_risk = case_when(
+      # One confirmed condition is enough, even if the others are unknown.
       diabetes == 1 | hypertension == 1 | obesity == 1 ~ 1,
+      # Classify as absent only when all three conditions are absent.
       diabetes == 0 & hypertension == 0 & obesity == 0 ~ 0,
+      # Otherwise, there is not enough information to decide.
       TRUE ~ NA_real_
     )
   )
+
+# Check that metabolic risk agrees with having at least one confirmed condition,
+# ignoring comparisons that return NA.
 stopifnot(
   all(
     (ard$metabolic_risk == 1) ==
@@ -625,6 +701,8 @@ stopifnot(
 )
 ```
 ```{r phenotype-table}
+# Summarise each condition among all adults before applying the remaining eligibility criteria.
+
 phenotype_table <- ard %>%
   filter(RIDAGEYR >= 20) %>%
   select(Diabetes = diabetes, Hypertension = hypertension,
@@ -633,6 +711,7 @@ phenotype_table <- ard %>%
   mutate(
     Phenotype = factor(Phenotype, levels = c("Diabetes", "Hypertension",
                                              "Obesity", "Metabolic risk (any)")),
+    # Show 1 as Present, 0 as Absent and NA as Indeterminate.
     status = case_when(status == 1 ~ "Present",
                        status == 0 ~ "Absent",
                        TRUE        ~ "Indeterminate"),
@@ -640,6 +719,8 @@ phenotype_table <- ard %>%
   ) %>%
   count(Phenotype, status) %>%
   group_by(Phenotype) %>%
+  # Calculate percentages within each condition, including indeterminate cases.
+  # These are sample counts and percentages, without survey weights.
   mutate(cell = sprintf("%s (%.1f)", format(n, big.mark = ","), 100 * n / sum(n))) %>%
   ungroup() %>%
   select(-n) %>%
@@ -649,9 +730,11 @@ knitr::kable(phenotype_table,
   col.names = c("Phenotype", "Present, n (%)", "Absent, n (%)", "Indeterminate, n (%)"),
   caption = "Metabolic phenotype classification among adults aged ≥20 years, before kidney-function and albuminuria eligibility criteria")
 
-# For the interpretation sentence: indeterminate status among adults never examined
+# RIDSTATR: 1 = interviewed only, 2 = interviewed and examined.
+# Count how many adults with indeterminate diabetes did not attend the examination.
 not_examined_ids <- demo$SEQN[demo$RIDSTATR == 1]
 ind_dm <- ard %>% filter(RIDAGEYR >= 20, is.na(diabetes))
+# Calculate the total with indeterminate diabetes and how many were not examined.
 n_ind_dm     <- nrow(ind_dm)
 n_ind_dm_nox <- sum(ind_dm$SEQN %in% not_examined_ids)
 ```
@@ -674,20 +757,29 @@ Smoking status was classified from self-reported cigarette use:
 
 
 ```{r smoking-derive}
+# SMQ020 = smoked at least 100 cigarettes in lifetime: 1 = yes, 2 = no.
+# SMQ040 = current smoking: 1 = every day, 2 = some days, 3 = not at all.
+# Both questions: 7 = refused, 9 = don't know; NA = missing.
+
 ard <- ard %>%
   mutate(
     smoking_status = case_when(
+      # Use lifetime smoking and current smoking together to classify smoking status.
       SMQ020 == 2 ~ "Never",
       SMQ020 == 1 & SMQ040 == 3 ~ "Former",
       SMQ020 == 1 & SMQ040 %in% c(1, 2) ~ "Current",
+      
+      # Leave smoking status missing when the answers do not establish a category.
       TRUE ~ NA_character_
     ),
+    # Set Never as the reference category for regression.
     smoking_status = factor(
       smoking_status,
       levels = c("Never", "Former", "Current")
     )
   )
 
+# Summarise smoking status among adults, including those with missing status.
 smoking_summary <- ard %>%
   filter(RIDAGEYR >= 20) %>%
   count(smoking_status, name = "N", .drop = FALSE) %>%
@@ -704,13 +796,19 @@ Of `r format(sum(smoking_summary$N), big.mark = ",")` adults, `r format(smoking_
 Eligibility criteria were applied sequentially; participants remaining and excluded at each step are shown below.
 
 ```{r eligibility-flag}
+# Record each eligibility decision as TRUE or FALSE before excluding anyone.
+# RIDEXPRG: 1 = pregnant, 2 = not pregnant, 3 = cannot determine; NA = missing.
+
 ard <- ard %>%
   mutate(
     eligible_age = !is.na(RIDAGEYR) & RIDAGEYR >= 20,
+    # Exclude confirmed pregnancy only; retain unknown or missing pregnancy status.
     eligible_not_pregnant = is.na(RIDEXPRG) | RIDEXPRG != 1,
+    # Require ACR, creatinine and a calculated eGFR.
     eligible_kidney_measurements = !is.na(URDACT) & !is.na(LBXSCR) & !is.na(egfr),
     eligible_egfr = !is.na(egfr) & egfr >= 60,
     eligible_metabolic_risk = !is.na(metabolic_risk) & metabolic_risk == 1,
+    # Participants must meet every criterion to enter the study.
     eligible_study = eligible_age &
                      eligible_not_pregnant &
                      eligible_kidney_measurements &
@@ -718,11 +816,12 @@ ard <- ard %>%
                      eligible_metabolic_risk
   )
 
-# Cumulative steps
+# Apply the criteria in sequence so each step includes only those who passed earlier steps.
 step_preg   <- ard$eligible_age & ard$eligible_not_pregnant
 step_kidney <- step_preg & ard$eligible_kidney_measurements
 step_egfr   <- step_kidney & ard$eligible_egfr
 
+# Count participants remaining and excluded at each step.
 flow <- tibble(
   Step = c(
     "Demographic file",
@@ -737,6 +836,8 @@ flow <- tibble(
 ) %>%
   mutate(Excluded = c(NA, -diff(N)))
 
+# Check that counts never increase, the final count matches the eligibility flag,
+# and every participant has a known eligibility decision.
 stopifnot(
   all(diff(flow$N) <= 0),
   tail(flow$N, 1) == sum(ard$eligible_study),
@@ -747,13 +848,16 @@ options(knitr.kable.NA = "—")
 knitr::kable(flow, format.args = list(big.mark = ","),
              caption = "Participant selection flow")
 
-# For text: reasons for exclusion at the metabolic-risk step
+# Separate exclusions due to absent metabolic risk from those due to unknown status.
 n_meta_absent <- sum(step_egfr & ard$metabolic_risk %in% 0)
 n_meta_indet  <- sum(step_egfr & is.na(ard$metabolic_risk))
 ```
 
 ```{r eligibility-event-summary}
+# Check that albuminuria status is known for every eligible participant.
 stopifnot(!anyNA(ard$elevated_acr[ard$eligible_study]))
+
+# Count eligible participants and those with elevated albuminuria for the report.
 n_eligible <- sum(ard$eligible_study)
 n_events   <- sum(ard$elevated_acr[ard$eligible_study])
 ```
@@ -764,18 +868,24 @@ At the final step, `r format(n_meta_absent, big.mark = ",")` participants were e
 ### Missing data
 
 ```{r missingness-summary}
+# Assess missing data among eligible participants only.
 eligible <- ard %>% filter(eligible_study)
 
+
+# Include the outcome and all predictors planned for the regression.
 model_vars <- c("elevated_acr", "RIDAGEYR", "RIAGENDR", "RIDRETH3",
                 "LBXGH", "mean_sbp", "BMXBMI", "smoking_status")
 
+
+# Count missing values for each variable and participants with complete data on all model variables.
 n_miss     <- vapply(model_vars, function(v) sum(is.na(eligible[[v]])), integer(1))
 n_complete <- sum(complete.cases(eligible[model_vars]))
 
-# Variables reported as complete in the text
+# Confirm that variables described as complete in the report have no missing values.
 stopifnot(all(n_miss[c("elevated_acr", "RIDAGEYR", "RIAGENDR",
                        "RIDRETH3", "LBXGH")] == 0))
 
+# Format missing counts and percentages for the report, using all eligible participants as the denominator.
 miss_txt <- function(v) sprintf("%d (%.1f%%)", n_miss[[v]], 100 * n_miss[[v]] / nrow(eligible))
 
 
@@ -787,6 +897,10 @@ Among `r format(nrow(eligible), big.mark = ",")` eligible participants, the outc
 ### Survey design variables
 
 ```{r survey-design-check}
+# WTPH2YR = phlebotomy sample weight.
+# SDMVSTRA = survey stratum; SDMVPSU = primary sampling unit.
+# Check that all three variables exist and are complete for eligible participants,
+# and that every weight is positive.
 stopifnot(
   all(c("WTPH2YR", "SDMVSTRA", "SDMVPSU") %in% names(eligible)),
   !anyNA(eligible$WTPH2YR), all(eligible$WTPH2YR > 0),
@@ -799,6 +913,7 @@ The phlebotomy weight (WTPH2YR), masked variance stratum (SDMVSTRA) and primary 
 ### Analysis-ready dataset
 
 ```{r analysis-ready-dataset}
+# Keep the variables needed for analysis and the source values needed to check derived variables.
 ard_columns <- c(
   "SEQN", "RIDAGEYR", "RIAGENDR", "RIDRETH3",
   "URDACT", "elevated_acr", "LBXSCR", "egfr", "LBXGH",
@@ -812,17 +927,23 @@ ard_columns <- c(
   "WTPH2YR", "SDMVSTRA", "SDMVPSU"
 )
 
+# Stop if any required column is missing.
 missing_columns <- setdiff(ard_columns, names(ard))
 if (length(missing_columns) > 0) {
   stop("Required columns missing from ard: ",
        paste(missing_columns, collapse = ", "))
 }
 
+# Keep eligible participants and the selected columns.
+# Retain participants with missing regression predictors for now.
 ard_final <- ard %>%
   filter(eligible_study) %>%
   select(all_of(ard_columns))
 
+# Check the expected participant count, unique IDs, eligibility,
+# albuminuria classification and survey variables before saving.
 stopifnot(
+  # Flag any change from the established final count of 3,370 participants.
   nrow(ard_final) == 3370,
   !anyNA(ard_final$SEQN),
   !anyDuplicated(ard_final$SEQN),
@@ -838,7 +959,7 @@ stopifnot(
   !anyNA(ard_final$SDMVPSU)
 )
 
-# Used in the text and DT caption
+# Use the dataset dimensions directly in the report and table caption.
 n_ard_rows <- nrow(ard_final)
 n_ard_cols <- ncol(ard_final)
 ```
@@ -854,6 +975,7 @@ Intermediate and unused columns were excluded; the dataset was saved as `data/pr
 
 
 ```{r preview-ard, include=FALSE}
+# Create an interactive table to inspect the final dataset and download it as CSV or Excel.
 htmltools::div(
   style = "overflow-x: auto; width: 100%;",
   DT::datatable(
@@ -871,14 +993,17 @@ htmltools::div(
       autoWidth  = FALSE
     )
   ) %>%
+    # Display eGFR and mean BP to one decimal place without changing the stored values.
     DT::formatRound(columns = c("egfr", "mean_sbp", "mean_dbp"), digits = 1)
 )
 ```
 ```{r export-ards}
 dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
 
+# Save the final dataset in R format to preserve variable types and labels.
 saveRDS(ard_final, file = "data/processed/nhanes_albuminuria_ard.rds")
 
+# Read the saved file back and check that it is identical to the original dataset.
 ard_reloaded <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
 stopifnot(identical(ard_final, ard_reloaded))
 ```
@@ -890,7 +1015,8 @@ stopifnot(identical(ard_final, ard_reloaded))
 # Reload the exported dataset (used by all validation checks)
 ard_reloaded <- readRDS("data/processed/nhanes_albuminuria_ard.rds")
 
-# CKD-EPI 2021 creatinine equation (race-free), written independently of the derivation code
+# Write the CKD-EPI 2021 equation separately to check the earlier calculation.
+# scr = creatinine (mg/dL); age = years; sex: 1 = male, 2 = female.
 ckd_epi_2021 <- function(scr, age, sex) {
   female <- sex == 2
   kappa  <- ifelse(female, 0.7, 0.9)
@@ -899,7 +1025,7 @@ ckd_epi_2021 <- function(scr, age, sex) {
     0.9938^age * ifelse(female, 1.012, 1)
 }
 
-# Reference values from the National Kidney Foundation CKD-EPI 2021 calculator
+# Test four examples against reference results from the National Kidney Foundation calculator.
 egfr_tests <- tibble(
   scr = c(0.7, 1.2, 0.5, 2.0),
   age = c(50, 60, 40, 70),
@@ -907,6 +1033,7 @@ egfr_tests <- tibble(
   nkf = c(105, 69, 122, 35)
 )
 
+# Check that all four calculated results match the reference values after rounding.
 check_egfr <- all(round(ckd_epi_2021(egfr_tests$scr, egfr_tests$age, egfr_tests$sex)) == egfr_tests$nkf)
 
 ```
@@ -914,12 +1041,17 @@ check_egfr <- all(round(ckd_epi_2021(egfr_tests$scr, egfr_tests$age, egfr_tests$
 ```{r validation-rederive}
 v <- ard_reloaded
 
-# Helpers: equality treating NA == NA as a match
+# Compare values, treating missing values in both versions as a match.
 same <- function(a, b) all((is.na(a) & is.na(b)) | (!is.na(a) & !is.na(b) & a == b))
+
+# Use numeric values without NHANES labels when comparing.
 num  <- function(x) as.numeric(x)
+
+# Identify confirmed yes answers; missing answers return FALSE.
 is1  <- function(x) !is.na(x) & x == 1
 
-# Re-derive from the source columns retained in the ARD
+# Recalculate derived variables from the source values saved in the dataset.
+# Compare these with the stored results to check that the derivations agree.
 re_sbp <- rowMeans(v[c("BPXOSY1", "BPXOSY2", "BPXOSY3")], na.rm = TRUE)
 re_sbp[is.nan(re_sbp)] <- NA
 re_dbp <- rowMeans(v[c("BPXODI1", "BPXODI2", "BPXODI3")], na.rm = TRUE)
@@ -927,6 +1059,7 @@ re_dbp[is.nan(re_dbp)] <- NA
 
 re_egfr <- ckd_epi_2021(num(v$LBXSCR), num(v$RIDAGEYR), num(v$RIAGENDR))
 
+# Reapply the diabetes, hypertension, obesity and metabolic-risk rules.
 re_dm <- ifelse(is1(v$DIQ010) | (!is.na(v$LBXGH) & v$LBXGH >= 6.5) | is1(v$DIQ050) | is1(v$DIQ070), 1,
          ifelse((v$DIQ010 %in% 2 & !is.na(v$LBXGH) & v$LBXGH < 6.5) |
                 (v$DIQ010 %in% 3 & !is.na(v$LBXGH) & v$LBXGH < 6.5 & !is1(v$DIQ050) & !is1(v$DIQ070)), 0, NA))
@@ -939,11 +1072,12 @@ re_ob <- ifelse(is.na(v$BMXBMI), NA, as.numeric(v$BMXBMI >= 30))
 re_mr <- ifelse(re_dm %in% 1 | re_htn %in% 1 | re_ob %in% 1, 1,
          ifelse(re_dm %in% 0 & re_htn %in% 0 & re_ob %in% 0, 0, NA))
 
+# Reclassify smoking from the original questionnaire answers.
 re_smk <- ifelse(v$SMQ020 %in% 2, "Never",
           ifelse(v$SMQ020 %in% 1 & v$SMQ040 %in% 3, "Former",
           ifelse(v$SMQ020 %in% 1 & v$SMQ040 %in% c(1, 2), "Current", NA)))
 
-# Compare each re-derived variable with the stored value
+# Compare every recalculated variable with its saved version.
 rederive_results <- c(
   elevated_acr   = same(v$elevated_acr, v$URDACT >= 30),
   mean_sbp       = isTRUE(all.equal(num(v$mean_sbp), re_sbp)),
@@ -956,12 +1090,13 @@ rederive_results <- c(
   smoking_status = same(as.character(v$smoking_status), re_smk)
 )
 
+# Pass only if all variable comparisons agree.
 check_rederive <- all(rederive_results)
 
 ```
 
 ```{r validation-source}
-# Each source file and the ARD columns taken from it
+# List the original dataset for each source variable saved in the ARD.
 src <- list(
   DEMO_L   = list(demo, c("RIDAGEYR", "RIAGENDR", "RIDRETH3", "SDMVSTRA", "SDMVPSU")),
   ALB_CR_L = list(alb,  "URDACT"),
@@ -974,34 +1109,37 @@ src <- list(
   SMQ_L    = list(smq,  c("SMQ020", "SMQ040"))
 )
 
-# Match ARD participants to each source file by SEQN and compare values column by column
+# Match participants by SEQN and check that saved values match the original data.
+# Missing values in both datasets count as a match.
 source_results <- vapply(src, function(s) {
   idx <- match(v$SEQN, s[[1]]$SEQN)
   all(vapply(s[[2]], function(col) same(num(v[[col]]), num(s[[1]][[col]][idx])), logical(1)))
 }, logical(1))
 
+# Pass only if all source datasets agree with the saved values.
 check_source <- all(source_results)
 
 ```
 
 ```{r validation-survey}
-# Reloaded file identical to the dataset that was exported
+# Check that saving and reloading preserved the dataset and its eligible participant count.
 check_reload <- identical(ard_final, ard_reloaded) && nrow(ard_reloaded) == sum(ard$eligible_study)
 
-# Full survey design: all participants with a positive phlebotomy weight
+# Use everyone with a finite, positive phlebotomy weight to check the full survey structure.
 survey_frame <- ard %>% filter(is.finite(WTPH2YR), WTPH2YR > 0)
 
-# PSUs per stratum in the full design (must be at least two)
+# Check that each stratum contains at least two primary sampling units (PSUs).
 psu_full  <- survey_frame %>% distinct(SDMVSTRA, SDMVPSU) %>% count(SDMVSTRA)
 check_psu <- all(psu_full$n >= 2)
 
-# PSUs per stratum within the eligible domain (reported, not a pass/fail check)
+# Check whether any stratum has only one PSU left after restricting to eligible participants.
 psu_domain <- survey_frame %>% filter(eligible_study) %>% distinct(SDMVSTRA, SDMVPSU) %>% count(SDMVSTRA)
 n_single_psu_domain <- sum(psu_domain$n == 1)
 
 ```
 
 ```{r validation-summary, include=FALSE}
+# Bring the five validation results together.
 checks <- tibble(
   Check = c(
     "eGFR implementation reproduces NKF CKD-EPI 2021 calculator values",
@@ -1013,10 +1151,12 @@ checks <- tibble(
   Passed = c(check_egfr, check_rederive, check_source, check_reload, check_psu)
 )
 
+# Stop if any check fails and name the failed checks.
 if (!all(checks$Passed)) {
   stop("Validation failed: ", paste(checks$Check[!checks$Passed], collapse = "; "))
 }
 
+# Show each validation result as PASS or FAIL.
 knitr::kable(
   transmute(checks, Check, Result = ifelse(Passed, "PASS", "FAIL")),
   caption = "Validation of the exported analysis-ready dataset"
@@ -1045,29 +1185,34 @@ library(survey)
 survey_source <- ard
 
 
-# Retain participants with valid phlebotomy weights
+# Use phlebotomy weights because the analysis requires blood measurements.
+# Keep participants with finite, positive weights.
 survey_base <- survey_source %>%
   filter(is.finite(WTPH2YR), WTPH2YR > 0)
 
+# Check that survey IDs and study eligibility are known for everyone in the survey sample.
 stopifnot(
   !anyNA(survey_base$SDMVSTRA),
   !anyNA(survey_base$SDMVPSU),
   !anyNA(survey_base$eligible_study)
 )
 
-# Declare the design before selecting the study population
+# Define the survey design before selecting eligible participants
+# so variance estimates account for the full sample structure.
 design_full <- svydesign(
   ids     = ~SDMVPSU,
   strata  = ~SDMVSTRA,
   weights = ~WTPH2YR,
   data    = survey_base,
+  # Treat PSU codes as belonging to their own stratum.
   nest    = TRUE
 )
 
 # Select eligible participants within the survey design
 design <- subset(design_full, eligible_study)
 
-# Confirm the same participants and ordering as the final ARD
+# Check the expected participant and event counts, and confirm that
+# participant IDs are in the same order as the saved ARD.
 stopifnot(
   nrow(design$variables) == 3370,
   sum(design$variables$elevated_acr) == 417,
@@ -1090,6 +1235,7 @@ Participants with elevated albuminuria were older, had higher mean HbA1c and sys
 ```{r table1}
 library(gtsummary)
 
+# Add readable category labels for Table 1, keeping the original variables.
 ard_reloaded$elevated_acr_f <- factor(
   ard_reloaded$elevated_acr,
   levels = c(FALSE, TRUE),
@@ -1124,6 +1270,8 @@ ard_reloaded$obesity_f <- factor(
   ard_reloaded$obesity, levels = c(0, 1), labels = c("No", "Yes")
 )
 
+# Add the labelled variables to the survey design.
+# Participant order was checked above so the labels match the correct records.
 design <- update(
   design,
   elevated_acr_f = ard_reloaded$elevated_acr_f,
@@ -1134,6 +1282,7 @@ design <- update(
   obesity_f = ard_reloaded$obesity_f
 )
 
+# Compare participant characteristics by albuminuria status using survey weights.
 tbl_svysummary(
   design,
   by = elevated_acr_f,
@@ -1155,6 +1304,7 @@ tbl_svysummary(
     hypertension_f ~ "Hypertension",
     obesity_f ~ "Obesity"
   ),
+  # Report weighted means (SD) and percentages.
   statistic = list(
     all_continuous() ~ "{mean} ({sd})",
     all_categorical() ~ "{p}%"
@@ -1163,15 +1313,18 @@ tbl_svysummary(
     all_continuous() ~ 1,
     all_categorical() ~ 1
   ),
+  # Use available observations for each variable and omit missing-value rows.
   missing = "no"
 ) %>%
   add_overall() %>%
+  # Use tests that account for the survey design to compare the two groups.
   add_p(
     test = list(
       all_continuous() ~ "svy.t.test",
       all_categorical() ~ "svy.chisq.test"
     )
   ) %>%
+  # Show actual participant counts in the headings, rather than weighted population        totals.
   modify_header(
     label = "**Characteristic**",
     all_stat_cols() ~ "**{level}**  \nN = {n_unweighted}"
@@ -1202,7 +1355,11 @@ tbl_svysummary(
 ## Prevalence of elevated albuminuria
 
 ```{r prevalence}
+# Estimate prevalence using survey weights, with a logit-based confidence interval
+# to keep the interval within 0–1.
 prev    <- svyciprop(~elevated_acr, design, method = "logit", na.rm = TRUE)
+
+# Extract the 95% confidence limits for the report.
 prev_ci <- confint(prev)
 ```
 
@@ -1211,7 +1368,8 @@ The survey-weighted prevalence of elevated albuminuria was `r sprintf("%.1f", 10
 ## Associations with elevated albuminuria
 
 ```{r complete-case, include=FALSE}
-# Scaled continuous predictors required by the locked model
+# Scale age and systolic BP per 10 units, and BMI per 5 units,
+# so the odds ratios describe meaningful increases. HbA1c stays per 1 percentage point.
 design <- update(
   design,
   age_per10 = RIDAGEYR / 10,
@@ -1220,7 +1378,8 @@ design <- update(
   bmi_per5  = BMXBMI / 5
 )
 
-# Restrict the survey design to complete cases on the seven predictors
+# Keep participants with all seven predictors available.
+# Subset within the survey design to preserve the sampling structure.
 design_cc <- subset(
   design,
   !is.na(age_per10) & !is.na(sex_f) & !is.na(race_f) &
@@ -1228,6 +1387,8 @@ design_cc <- subset(
   !is.na(smoking_status)
 )
 
+# Count participants included in the model, those with elevated albuminuria,
+# and those excluded because of missing predictors.
 cc_summary <- tibble(
   Eligible_N      = 3370L,
   Complete_case_N = nrow(design_cc$variables),
@@ -1244,22 +1405,26 @@ knitr::kable(
 The model included `r format(cc_summary$Complete_case_N, big.mark = ",")` complete-case participants, of whom `r cc_summary$Events` had elevated albuminuria.
 
 ```{r primary-model}
-# Set reference categories: Male and Non-Hispanic White
+# Use Male and Non-Hispanic White as reference groups.
+# Never smoker was already set as the smoking reference.
 design_cc <- update(
   design_cc,
   sex_f  = relevel(sex_f, ref = "Male"),
   race_f = relevel(race_f, ref = "Non-Hispanic White")
 )
 
-# Primary survey-weighted logistic regression
-model <- svyglm(
+# Estimate each predictor's association with elevated albuminuria,
+# adjusting for the other predictors and the survey design.
+model <- survey::svyglm(
   elevated_acr ~ age_per10 + sex_f + race_f + hba1c +
                  sbp_per10 + bmi_per5 + smoking_status,
   design = design_cc,
+  # Use logistic regression without warnings about non-integer outcomes from survey        weights.
   family = quasibinomial()
 )
 
-# Extract adjusted ORs and 95% CIs
+# Convert model coefficients and confidence limits to adjusted odds ratios.
+# Omit the intercept and format the results for the table.
 library(broom)
 library(scales)
 
@@ -1273,7 +1438,7 @@ or_table <- tidy(model, conf.int = TRUE, exponentiate = TRUE) %>%
   ) %>%
   select(term, OR, CI_low, CI_high, p)
 
-# Readable labels
+# Replace model term names with labels showing the units and reference groups.
 or_table <- or_table %>%
   mutate(
     Characteristic = case_when(
@@ -1306,8 +1471,11 @@ After adjustment, older age, higher HbA1c and higher mean systolic blood pressur
 
 
 ```{r model-checks, echo=FALSE, results='hide'}
-# Events-per-variable
+# Calculate the number of albuminuria events per predictor parameter
+# to assess how much data supports the model.
 n_events  <- sum(design_cc$variables$elevated_acr)
+# Count each estimated coefficient, including separate category comparisons,
+# but exclude the intercept.
 n_params  <- length(coef(model)) - 1          # exclude intercept
 epv       <- n_events / n_params
 
@@ -1318,8 +1486,10 @@ tibble(
 ) %>%
   knitr::kable(caption = "Events-per-variable assessment")
 ```
+
 ```{r linearity-check, echo=FALSE, results='hide'}
-# Check linearity by testing a quadratic term for each continuous predictor
+# Add a squared term for one predictor at a time, keeping the other predictors unchanged.
+# Test whether its association with the log odds of albuminuria shows curvature.
 
 quad_age <- svyglm(
   elevated_acr ~ age_per10 + I(age_per10^2) + sex_f + race_f +
@@ -1345,7 +1515,7 @@ quad_bmi <- svyglm(
   design = design_cc, family = quasibinomial()
 )
 
-# Extract p-value of each quadratic term
+# Extract each squared term's p-value to assess evidence of curvature.
 quad_p <- tibble(
   Term = c("Age squared", "HbA1c squared", "Systolic BP squared", "BMI squared"),
   p_value = c(
