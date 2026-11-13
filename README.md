@@ -1,15 +1,14 @@
-
 # NHANES Albuminuria Study — Cambridge MSt Module 1
 
 ## Project overview
 
 This project forms part of the University of Cambridge MSt in Healthcare Data Science, Module 1.
 
-The objective is to construct a documented, validated and reproducible analysis-ready dataset (ARD) for investigating clinical and metabolic characteristics associated with elevated albuminuria.
+It constructs a documented, validated and reproducible analysis-ready dataset (ARD) for investigating clinical and metabolic characteristics associated with elevated albuminuria, and applies it in an illustrative survey-weighted analysis.
 
 ## Research question
 
-Among adults with metabolic risk factors and preserved eGFR (≥60 mL/min/1.73 m²), which clinical and metabolic characteristics are associated with elevated albuminuria (urine ACR ≥30 mg/g)?
+Among U.S. adults aged ≥20 years with at least one metabolic risk factor (diabetes, hypertension or obesity) and preserved eGFR (≥60 mL/min/1.73 m²), which clinical and metabolic characteristics are associated with elevated albuminuria (urine ACR ≥30 mg/g)?
 
 ## Dataset
 
@@ -19,7 +18,7 @@ Among adults with metabolic risk factors and preserved eGFR (≥60 mL/min/1.73 m
 
 **Website:** https://wwwn.cdc.gov/nchs/nhanes/
 
-The analysis uses publicly available participant-level data from multiple NHANES components, linked using participant identifiers.
+Nine public-use component files are linked by participant identifier (SEQN): DEMO_L, ALB_CR_L, BIOPRO_L, GHB_L, BMX_L, BPXO_L, DIQ_L, BPQ_L and SMQ_L.
 
 ## Study design
 
@@ -28,6 +27,7 @@ Cross-sectional observational association study.
 ### Eligibility criteria
 
 - Adults aged ≥20 years.
+- Not pregnant at examination (participants with RIDEXPRG = 1 excluded).
 - Valid urine ACR and serum creatinine measurements.
 - eGFR ≥60 mL/min/1.73 m² using the 2021 race-free CKD-EPI creatinine equation.
 - At least one of diabetes, hypertension or obesity.
@@ -39,45 +39,44 @@ Cross-sectional observational association study.
 - **Obesity:** BMI ≥30 kg/m².
 - **Elevated albuminuria:** Urine ACR ≥30 mg/g.
 
-Phenotype implementation rules and validation will be documented in the analysis workflow and metadata.
+Full implementation rules, including indeterminate categories, are documented in the report and the codebook.
 
-## Planned analysis
+## Analysis-ready dataset
 
-Survey-weighted descriptive analysis and multivariable logistic regression, accounting for the NHANES complex survey design.
+- **File:** `data/processed/nhanes_albuminuria_ard.rds`
+- **Size:** 3,370 participants × 33 variables; 417 with elevated albuminuria.
+- **Documentation:** `metadata/codebook_metadata.md` (variable definitions, source files, derivation rules, missingness and the CKD-EPI 2021 equation).
 
-The primary deliverable is the validated analysis-ready dataset.
+The eligible-only ARD must be used with the supplied workflow, which reconstructs the broader phlebotomy-weighted survey design before selecting the eligible subpopulation.
 
-## Project structure
+## Analysis
 
-- `data/raw/` — Original NHANES source files
-- `data/processed/` — Derived analysis-ready dataset
-- `metadata/` — Data dictionary, phenotype definitions and provenance
-- `outputs/figures/` — Generated figures
-- `outputs/tables/` — Generated tables
-- `submission/` — Assignment submission materials
-- `analysis.Rmd` — Main reproducible R Markdown workflow (planned)
-- `renv.lock` — R package dependency versions
+Survey-weighted descriptive analysis and multivariable logistic regression (`survey::svyglm()`, quasibinomial family) using phlebotomy weights (WTPH2YR), strata (SDMVSTRA) and PSUs (SDMVPSU).
 
-## Reproducibility
+## Files
 
-The project uses R, RStudio, Git and `renv`.
+- `HDS_MM_MaherAldemerdash_2611.Rmd` — Complete workflow: package installation, data import, ARD construction, validation, analysis and report
+- `HDS_MM_MaherAldemerdash_2611.html` — Knitted report
+- `references.bib`, `vancouver.csl` — References and citation style
+- `styles.css` — Report styling
+- `data/raw/` — The nine NHANES source files (`.XPT`)
+- `data/processed/nhanes_albuminuria_ard.rds` — Analysis-ready dataset
+- `metadata/codebook_metadata.md` — Codebook
 
-Once the workflow is completed:
+## Reproducing the report
 
-1. Clone the repository.
-2. Open `HDS_M1_NHANES.Rproj` in RStudio.
-3. Run `renv::restore()` to install the recorded package versions.
-4. Obtain the required NHANES source files in `data/raw/`.
-5. Knit `analysis.Rmd` to reproduce data preparation, validation and analytical outputs.
+Requirements: R and RStudio, with an internet connection for package installation.
 
-These instructions will be tested and updated before submission.
+1. Download the repository (**Code → Download ZIP**) and unzip it, keeping the folder structure.
+2. In RStudio, run once in the Console:
+   ```r
+   install.packages("rmdformats")
+   ```
+   This is the report's output format; it must be installed before knitting.
+3. Open `HDS_MM_MaherAldemerdash_2611.Rmd` and click **Knit**.
 
-## Project status
+All other packages are installed automatically by the first chunk. The source data are read from `data/raw/`; any missing file is downloaded from the CDC website. Knitting rebuilds the ARD, saves it to `data/processed/nhanes_albuminuria_ard.rds`, runs all validation checks and produces the HTML report. Knitting stops with an error if any validation check fails.
 
-- Stage 00 — Project setup completed.
-- Stage 01 — Dataset selection and feasibility completed.
-- Stage 02 — Literature review and study design pending.
+## Data provenance and use
 
-## Data provenance
-
-NHANES data are publicly released by CDC/NCHS. The final report and metadata will document source files, variable definitions, download information and applicable data-use guidance.
+NHANES data are publicly released by CDC/NCHS and were collected under NCHS Ethics Review Board approval. This project uses public-use, de-identified files only; no linkage to identifiable information was attempted.
