@@ -26,6 +26,8 @@ renv/local/
 ~$*
 submission/*coversheet*
 submission/*certificate*
+Assignment_coversheet*
+Confidentiality_and_Data_protection*
 
 # Local credentials
 .env
