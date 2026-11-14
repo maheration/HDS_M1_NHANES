@@ -143,7 +143,7 @@ Eligible participants were adults aged ≥20 years with measured urine ACR and s
 
 
 ## Source-data assessment
-Nine public-use NHANES August 2021–August 2023 component files were obtained from the CDC repository and imported using haven::read_xpt(); the variables taken from each are listed in the data dictionary.
+Nine public-use NHANES August 2021–August 2023 component files were obtained from the CDC repository and imported using haven::read_xpt(); the variables taken from each are listed in the codebook.
 
 ```{r source-files-structure, echo=FALSE, include=FALSE}
 
@@ -739,8 +739,7 @@ n_ind_dm     <- nrow(ind_dm)
 n_ind_dm_nox <- sum(ind_dm$SEQN %in% not_examined_ids)
 ```
 
-Among adults with indeterminate diabetes status, 1,514 of 1,762 (86%) had not attended the examination centre and lacked HbA1c required to establish absence. Combined metabolic risk was less often indeterminate because any confirmed phenotype sufficed.
-
+Indeterminate classifications largely reflected missing examination data rather than conflicting information. Obesity was indeterminate only when BMI was missing, and diabetes and hypertension could not be classified as absent without measured HbA1c or blood pressure, respectively.
 
 ### Demographic and continuous covariates
 
@@ -862,7 +861,7 @@ n_eligible <- sum(ard$eligible_study)
 n_events   <- sum(ard$elevated_acr[ard$eligible_study])
 ```
 
-At the final step, `r format(n_meta_absent, big.mark = ",")` participants were excluded because they had no metabolic risk factor and `r n_meta_indet` because their status was indeterminate. Of the `r format(n_eligible, big.mark = ",")` eligible participants, `r n_events` (`r round(100 * n_events / n_eligible, 1)`%) had elevated albuminuria.
+Of the `r format(n_eligible, big.mark = ",")` eligible participants, `r n_events` (`r round(100 * n_events / n_eligible, 1)`%) had elevated albuminuria.
 
 
 ### Missing data
