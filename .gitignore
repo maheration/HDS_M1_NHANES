@@ -30,3 +30,9 @@ submission/*certificate*
 # Local credentials
 .env
 .env.*
+
+
+
+.RData
+.Rhistory
+.Rproj.user/

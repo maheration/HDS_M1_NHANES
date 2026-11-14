@@ -30,7 +30,8 @@ knitr::opts_chunk$set(
 pkgs <- c("haven", "dplyr", "tidyr", "tibble", "survey", "gtsummary",
           "broom", "scales", "knitr", "DT", "htmltools")
 
-# Install only missing packages, preserving versions already installed.
+# renv::restore() installs the exact versions in renv.lock; this loop is a fallback
+# that installs any missing package and loads all packages used in the report.
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {
     install.packages(p)
@@ -39,14 +40,7 @@ for (p in pkgs) {
 }
 ```
 
-```{r packages}
-library(haven)
-library(dplyr)
-library(survey)
-library(gtsummary)
-library(broom)
-library(knitr)
-```
+
 
 
 ```{r download-raw-datasets, include=FALSE}
