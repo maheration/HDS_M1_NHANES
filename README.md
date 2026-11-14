@@ -65,17 +65,14 @@ Survey-weighted descriptive analysis and multivariable logistic regression (`sur
 
 ## Reproducing the report
 
-Requirements: R and RStudio, with an internet connection for package installation.
+Requirements: R (version 4.6.1 was used) and RStudio, with an internet connection.
 
 1. Download the repository (**Code → Download ZIP**) and unzip it, keeping the folder structure.
-2. In RStudio, run once in the Console:
-   ```r
-   install.packages("rmdformats")
-   ```
-   This is the report's output format; it must be installed before knitting.
-3. Open `HDS_MM_MaherAldemerdash_2611.Rmd` and click **Knit**.
+2. Open `HDS_M1_NHANES.Rproj` in RStudio (not the .Rmd). The project uses **renv**, which installs itself automatically on first opening.
+3. In the Console, run `renv::restore()` and answer `Y`. This installs the exact package versions recorded in `renv.lock`.
+4. Open `HDS_MM_MaherAldemerdash_2611.Rmd` and click **Knit**.
 
-All other packages are installed automatically by the first chunk. The source data are read from `data/raw/`; any missing file is downloaded from the CDC website. Knitting rebuilds the ARD, saves it to `data/processed/nhanes_albuminuria_ard.rds`, runs all validation checks and produces the HTML report. Knitting stops with an error if any validation check fails.
+The source data are read from `data/raw/`; any missing file is downloaded from the CDC website. Knitting rebuilds the ARD, saves it to `data/processed/nhanes_albuminuria_ard.rds`, runs all validation checks and produces the HTML report. Knitting stops with an error if any validation check fails.
 
 ## Data provenance and use
 
