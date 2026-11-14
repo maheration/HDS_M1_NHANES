@@ -55,6 +55,8 @@ Survey-weighted descriptive analysis and multivariable logistic regression (`sur
 
 ## Files
 
+- `HDS_M1_NHANES.Rproj` — RStudio project (open this first)
+- `renv.lock`, `.Rprofile`, `renv/` — Package versions and environment (renv)
 - `HDS_MM_MaherAldemerdash_2611.Rmd` — Complete workflow: package installation, data import, ARD construction, validation, analysis and report
 - `HDS_MM_MaherAldemerdash_2611.html` — Knitted report
 - `references.bib`, `vancouver.csl` — References and citation style
