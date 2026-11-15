@@ -928,7 +928,7 @@ if (length(missing_columns) > 0) {
 }
 
 # Keep eligible participants and the selected columns.
-# Retain participants with missing regression predictors for now.
+# Retain participants with missing regression predictors.
 ard_final <- ard %>%
   filter(eligible_study) %>%
   select(all_of(ard_columns))
@@ -1173,10 +1173,8 @@ Survey-weighted logistic regression used `survey::svyglm()` with a quasibinomial
 
 
 ```{r survey-design}
-library(survey)
 
 survey_source <- ard
-
 
 # Use phlebotomy weights because the analysis requires blood measurements.
 # Keep participants with finite, positive weights.
@@ -1226,7 +1224,7 @@ Participants with elevated albuminuria were older, had higher mean HbA1c and sys
 
 
 ```{r table1}
-library(gtsummary)
+
 
 # Add readable category labels for Table 1, keeping the original variables.
 ard_reloaded$elevated_acr_f <- factor(
@@ -1264,7 +1262,6 @@ ard_reloaded$obesity_f <- factor(
 )
 
 # Add the labelled variables to the survey design.
-# Participant order was checked above so the labels match the correct records.
 design <- update(
   design,
   elevated_acr_f = ard_reloaded$elevated_acr_f,
@@ -1349,7 +1346,7 @@ tbl_svysummary(
 
 ```{r prevalence}
 # Estimate prevalence using survey weights, with a logit-based confidence interval
-# to keep the interval within 0–1.
+
 prev    <- svyciprop(~elevated_acr, design, method = "logit", na.rm = TRUE)
 
 # Extract the 95% confidence limits for the report.
@@ -1418,8 +1415,7 @@ model <- survey::svyglm(
 
 # Convert model coefficients and confidence limits to adjusted odds ratios.
 # Omit the intercept and format the results for the table.
-library(broom)
-library(scales)
+
 
 or_table <- tidy(model, conf.int = TRUE, exponentiate = TRUE) %>%
   filter(term != "(Intercept)") %>%
@@ -1465,7 +1461,7 @@ After adjustment, older age, higher HbA1c and higher mean systolic blood pressur
 
 ```{r model-checks, echo=FALSE, results='hide'}
 # Calculate the number of albuminuria events per predictor parameter
-# to assess how much data supports the model.
+
 n_events  <- sum(design_cc$variables$elevated_acr)
 # Count each estimated coefficient, including separate category comparisons,
 # but exclude the intercept.
