@@ -69,7 +69,7 @@ Survey-weighted descriptive analysis and multivariable logistic regression (`sur
 
 Requirements: R (version 4.6.1 was used) and RStudio, with an internet connection.
 
-1. Download the repository (**Code → Download ZIP**) and unzip it, keeping the folder structure.
+1. Extract the submitted ZIP file, or download the GitHub repository (**Code → Download ZIP**) and extract it. Keep the folder structure intact.
 2. Open `HDS_M1_NHANES.Rproj` in RStudio (not the .Rmd). The project uses **renv**, which installs itself automatically on first opening.
 3. In the Console, run `renv::restore()` and answer `Y`. This installs the exact package versions recorded in `renv.lock`.
 4. Open `HDS_M1_MaherAldemerdash_2611.Rmd` and click **Knit**.
