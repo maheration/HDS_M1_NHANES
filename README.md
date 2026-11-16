@@ -57,8 +57,8 @@ Survey-weighted descriptive analysis and multivariable logistic regression (`sur
 
 - `HDS_M1_NHANES.Rproj` — RStudio project (open this first)
 - `renv.lock`, `.Rprofile`, `renv/` — Package versions and environment (renv)
-- `HDS_MM_MaherAldemerdash_2611.Rmd` — Complete workflow: package installation, data import, ARD construction, validation, analysis and report
-- `HDS_MM_MaherAldemerdash_2611.html` — Knitted report
+- `HDS_M1_MaherAldemerdash_2611.Rmd` — Complete workflow: package installation, data import, ARD construction, validation, analysis and report
+- `HDS_M1_MaherAldemerdash_2611.html` — Knitted report
 - `references.bib`, `vancouver.csl` — References and citation style
 - `styles.css` — Report styling
 - `data/raw/` — The nine NHANES source files (`.XPT`)
@@ -72,7 +72,7 @@ Requirements: R (version 4.6.1 was used) and RStudio, with an internet connectio
 1. Download the repository (**Code → Download ZIP**) and unzip it, keeping the folder structure.
 2. Open `HDS_M1_NHANES.Rproj` in RStudio (not the .Rmd). The project uses **renv**, which installs itself automatically on first opening.
 3. In the Console, run `renv::restore()` and answer `Y`. This installs the exact package versions recorded in `renv.lock`.
-4. Open `HDS_MM_MaherAldemerdash_2611.Rmd` and click **Knit**.
+4. Open `HDS_M1_MaherAldemerdash_2611.Rmd` and click **Knit**.
 
 The source data are read from `data/raw/`; any missing file is downloaded from the CDC website. Knitting rebuilds the ARD, saves it to `data/processed/nhanes_albuminuria_ard.rds`, runs all validation checks and produces the HTML report. Knitting stops with an error if any validation check fails.
 
